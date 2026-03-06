@@ -1,0 +1,44 @@
+{
+  "metadata": {
+    "source": "test"
+  },
+  "nodes": [
+    {
+      "id": "vpc-1",
+      "label": "VPC One",
+      "kind": "aws.vpc",
+      "source": "test",
+      "attrs": {}
+    },
+    {
+      "id": "subnet-1",
+      "label": "Subnet One",
+      "kind": "aws.subnet",
+      "source": "test",
+      "attrs": {}
+    },
+    {
+      "id": "ec2-1",
+      "label": "Instance One",
+      "kind": "aws.ec2",
+      "source": "test",
+      "attrs": {}
+    }
+  ],
+  "edges": [
+    {
+      "src": "subnet-1",
+      "dst": "vpc-1",
+      "rel": "in",
+      "source": "test",
+      "attrs": {}
+    },
+    {
+      "src": "ec2-1",
+      "dst": "subnet-1",
+      "rel": "in",
+      "source": "test",
+      "attrs": {}
+    }
+  ]
+}

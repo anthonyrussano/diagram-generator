@@ -1,0 +1,13 @@
+{
+  "edges_added": [
+    "cache -> db (SQL)",
+    "web -> cache (get/set)"
+  ],
+  "edges_removed": [
+    "web -> db (SQL)"
+  ],
+  "nodes_added": [
+    "cache"
+  ],
+  "nodes_removed": []
+}

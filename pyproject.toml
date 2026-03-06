@@ -1,0 +1,35 @@
+[project]
+name = "agent-diagrams"
+version = "0.1.0"
+description = "Agent-oriented infrastructure diagram generator from AWS, Terraform, JSON, and Kubernetes sources"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+render = [
+  "diagrams>=0.25.1",
+]
+aws-boto3 = [
+  "boto3>=1.42.60",
+  "diagrams>=0.25.1",
+]
+dev = [
+  "pytest>=8.0",
+]
+
+[project.scripts]
+diagram-gen = "agent_diagrams.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_diagrams"]
