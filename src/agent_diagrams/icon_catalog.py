@@ -80,6 +80,9 @@ ICON_ALIASES: dict[str, str] = {
     "aws.ssm": "diagrams.aws.management.SystemsManagerParameterStore",
     "aws.cloudwatch": "diagrams.aws.management.Cloudwatch",
     "aws.sg": "diagrams.generic.network.Firewall",
+    "tf.aws_security_group": "diagrams.generic.network.Firewall",
+    "tf.aws_iam_role": "diagrams.aws.security.IAMRole",
+    "tf.aws_iam_policy": "diagrams.aws.security.IAMPermissions",
     "k8s.deploy": "diagrams.k8s.compute.Deployment",
     "k8s.deployment": "diagrams.k8s.compute.Deployment",
     "k8s.pod": "diagrams.k8s.compute.Pod",
@@ -187,26 +190,57 @@ ICON_ALIASES: dict[str, str] = {
 }
 
 
-# Words that are legitimate exact `kind`/`label` values (a JSON node with
-# kind: "user" should still render a person icon) but resolve to a specific
-# person icon or a single presumed third-party vendor brand, so they are too
-# high-risk to award to one word buried inside a longer, human-written label.
-# Without this guard, "User Authentication Service" or "Users API" matches the
-# word "user(s)" before ever considering "service"/"api", silently rendering a
-# backend service as a person icon; "auth-service" gets branded with the Auth0
-# logo though it may not use Auth0 at all. Other generic infra nouns (e.g.
-# "security", "database", "storage") are deliberately left out of this set:
-# they resolve to generic concept icons, not a specific person or vendor, so
-# matching them as a token (e.g. "security" inside "aws_security_group") is
-# still a reasonable, non-misleading guess. These keys only resolve on a
-# full-string match; they are skipped by the per-token fallback below.
+# Bare English/infra category words. Each is a legitimate exact `kind`/`label`
+# value (a JSON node with kind: "user" should still render a person icon, and
+# kind: "service" should still render a Service icon), but none of them
+# reliably identify a technology when found as one word inside a longer,
+# human-written label or a structured `provider_resource_type` kind string.
+# "user-service"/"users-service" would otherwise match "user(s)" and render a
+# backend service as a person icon; "auth-service" would get branded with the
+# Auth0 logo though it may not use Auth0; "customer-service" or
+# "deployment-pipeline" would get an arbitrary Kubernetes Service/Deployment
+# icon despite naming a concept the catalog has no real evidence for. Unlike
+# distinctive technology/brand names (cloudflare, docker, postgres, ...),
+# which map a name to that exact same technology's icon, these bare words map
+# a broad category or platform name to one arbitrarily chosen representative
+# sub-icon (e.g. "gcp"/"kubernetes" -> a Compute Engine instance / a Pod, out
+# of hundreds of unrelated resource types each platform actually has), so they
+# only resolve on a full-string match; they are skipped by the per-token
+# fallback below. A structured `tf.gcp_storage_bucket` or `tf.k8s_secret` kind
+# must not silently render as a generic compute instance or Pod just because
+# the token "gcp"/"k8s" appears in it. Precise cases that would otherwise be
+# lost this way (e.g. a Terraform `aws_security_group`/`aws_iam_role`) get
+# their own explicit full-string alias instead of relying on a bare word.
 GENERIC_KIND_ONLY_ALIASES = frozenset(
     {
+        "network",
+        "internet",
         "user",
         "users",
         "actor",
         "auth",
         "iam",
+        "gcp",
+        "googlecloud",
+        "kubernetes",
+        "k8s",
+        "deployment",
+        "pod",
+        "service",
+        "ingress",
+        "secret",
+        "configmap",
+        "namespace",
+        "serviceaccount",
+        "loadbalancer",
+        "database",
+        "storage",
+        "file",
+        "document",
+        "dns",
+        "certificate",
+        "monitoring",
+        "security",
     }
 )
 
@@ -341,14 +375,22 @@ def _lookup_named_icon(value: str) -> str | None:
     if key in builtins:
         return builtins[key]
 
+    # Per-token fallback only draws from the small, hand-reviewed `explicit`
+    # aliases, never the dynamically discovered `builtins` catalog. A short
+    # class name like "Role" or "Policy" happens to be unique to exactly one
+    # provider purely by accident of what ships in the installed `diagrams`
+    # package (e.g. "Role" only exists under k8s.rbac, "Policy" only under
+    # azure.managementgovernance), so an unrelated word inside a label or a
+    # structured `provider_resource_type` kind (like "tf.aws_iam_role") could
+    # silently pick up an arbitrary, wrong-provider icon. `builtins` is still
+    # used for the full-string check above, where a caller names an icon
+    # deliberately (an explicit `attrs.icon`, or a bare canonical class name).
     tokens = [normalize_icon_key(token) for token in re.split(r"[^a-zA-Z0-9+#]+", raw) if token]
     for token in tokens:
         if token in GENERIC_KIND_ONLY_ALIASES:
             continue
         if token in explicit:
             return explicit[token]
-        if token in builtins:
-            return builtins[token]
     return None
 
 

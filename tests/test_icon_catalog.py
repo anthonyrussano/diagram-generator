@@ -47,21 +47,58 @@ def test_resolve_common_devops_icons(kind, label, expected):
 
 
 @pytest.mark.parametrize(
-    ("kind", "label", "node_id", "expected"),
+    ("kind", "label", "node_id"),
     [
-        ("component", "user-service", "user-service", "diagrams.k8s.network.Service"),
-        ("component", "users-service", "users-service", "diagrams.k8s.network.Service"),
-        ("component", "auth-service", "auth-service", "diagrams.k8s.network.Service"),
-        ("tf.aws_security_group", "web-sg", "sg-123", "diagrams.generic.network.Firewall"),
+        ("component", "user-service", "user-service"),
+        ("component", "users-service", "users-service"),
+        ("component", "auth-service", "auth-service"),
+        ("component", "customer-service", "customer-service"),
+        ("component", "deployment-pipeline", "deployment-pipeline"),
     ],
 )
-def test_generic_person_and_vendor_words_do_not_win_over_other_tokens(kind, label, node_id, expected):
-    assert resolve_node_icon(kind, label, node_id) == expected
+def test_generic_infra_nouns_do_not_win_a_guess_from_an_unrelated_label(kind, label, node_id):
+    # None of these labels carry real evidence of a specific technology or
+    # Kubernetes resource; a wrong guess (a person icon, an assumed vendor
+    # brand, an arbitrary Kubernetes Service/Deployment) is worse than being
+    # reported as an unresolved icon fallback.
+    assert resolve_node_icon(kind, label, node_id) is None
+
+
+@pytest.mark.parametrize(
+    ("kind", "label", "expected"),
+    [
+        ("tf.aws_security_group", "web-sg", "diagrams.generic.network.Firewall"),
+        ("tf.aws_iam_role", "app-role", "diagrams.aws.security.IAMRole"),
+        ("tf.aws_iam_policy", "app-policy", "diagrams.aws.security.IAMPermissions"),
+    ],
+)
+def test_structured_terraform_kinds_get_explicit_provider_aware_icons(kind, label, expected):
+    # These would otherwise fall through to the dynamic catalog's per-token
+    # short-name matching and pick up an arbitrary, wrong-provider icon (e.g.
+    # a Kubernetes RBAC "Role" or an Azure "Policy" for an AWS resource).
+    assert resolve_node_icon(kind, label, "node") == expected
 
 
 def test_exact_generic_kind_still_resolves_to_its_dedicated_icon():
     assert resolve_node_icon("user", "A user", "u1") == "diagrams.onprem.client.User"
     assert resolve_node_icon("aws.iam", "IAM role", "role") == "diagrams.aws.security.IAM"
+    assert resolve_node_icon("gcp", "Google Cloud", "n") == "diagrams.gcp.compute.ComputeEngine"
+    assert resolve_node_icon("kubernetes", "K8s", "n") == "diagrams.k8s.compute.Pod"
+
+
+def test_dynamic_catalog_short_names_do_not_leak_into_token_fallback():
+    # "gcp"/"k8s" are broad platform names mapped to one representative
+    # sub-icon (Compute Engine / Pod); a structured Terraform resource type
+    # under that platform must not inherit that unrelated sub-icon just
+    # because the platform name appears in it.
+    assert resolve_node_icon("tf.gcp_iam_policy", "reader-policy", "n") is None
+    assert resolve_node_icon("tf.k8s_secret_resource", "app-secret", "n") is None
+    # "Role"/"Policy" happen to be unique to exactly one unrelated provider
+    # (k8s.rbac / azure.managementgovernance) purely by chance of what ships
+    # in the installed diagrams package; the dynamically discovered catalog
+    # must not be consulted for per-token fallback at all.
+    assert resolve_node_icon("tf.azurerm_role_assignment", "role-assignment", "n") is None
+    assert resolve_node_icon("tf.aws_kms_key", "app-key", "n") is None
 
 
 def test_explicit_node_icon_takes_precedence():
