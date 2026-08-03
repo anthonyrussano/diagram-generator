@@ -10,6 +10,7 @@ Run from repo root:
 pwd
 uv run diagram-gen --help
 uv run diagram-gen spec --help
+uv run diagram-gen spec-batch --help
 uv run diagram-gen aws-boto3 --help
 ```
 
@@ -27,7 +28,7 @@ If non-Mermaid output is requested (`--diagram-format ...`):
 
 ```bash
 dot -V
-uv run --with diagrams python -c "import diagrams; print(diagrams.__version__)"
+uv run --with diagrams python -c 'from importlib.metadata import version; print(version("diagrams"))'
 ```
 
 If `aws-boto3` mode is requested:
@@ -59,10 +60,14 @@ Verify:
 If composite workflows were changed, smoke at least one:
 
 ```bash
+uv run diagram-gen spec --spec <spec.yaml> --check
 uv run diagram-gen spec --spec <spec.yaml> --output smoke-spec --format png
+uv run diagram-gen spec-batch --spec-dir <spec-dir> --check
 uv run diagram-gen compare --spec <states.yaml> --output-prefix smoke-compare --format png
 uv run diagram-gen aws-boto3 --help
 ```
+
+For a documentation set, prefer one batch invocation with repeated `--format` flags over shell loops. It loads each spec once, preserves relative paths, and prints per-spec plus aggregate counts. See [SPECS.md](SPECS.md).
 
 ## 3. Feature-Specific Smoke Commands
 

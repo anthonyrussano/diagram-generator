@@ -204,5 +204,17 @@ podman run --rm --entrypoint sh diagram-gen:local -c '
 Run the test suite inside the image:
 
 ```bash
-podman run --rm --entrypoint sh diagram-gen:local -c 'cd /app && pytest tests/ -q'
+podman run --rm --entrypoint sh diagram-gen:local -c 'cd /app && uv run pytest tests/ -q'
+```
+
+Render a mounted directory of specs to SVG and PNG without a host Graphviz install:
+
+```bash
+podman run --rm \
+  --userns=keep-id \
+  --volume "$PWD:/workspace:Z" \
+  diagram-gen:local spec-batch \
+  --spec-dir docs/diagrams/specs \
+  --out-dir docs/diagrams/rendered \
+  --format svg --format png
 ```

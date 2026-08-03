@@ -7,9 +7,12 @@ import pytest
 import yaml
 
 from agent_diagrams.spec_workflows import (
+    DEFAULT_GRAPH_ATTR,
     compare_specs,
+    edge_attributes,
     load_data_file,
     normalize_state_spec,
+    spec_counts,
     validate_spec,
     write_compare_summary,
 )
@@ -125,6 +128,94 @@ def test_validate_spec_cluster_without_id():
     spec = {"nodes": [], "edges": [], "clusters": [{"label": "No ID"}]}
     with pytest.raises(ValueError, match="must include 'id'"):
         validate_spec(spec)
+
+
+def test_validate_spec_duplicate_cluster_id():
+    spec = {
+        "nodes": [],
+        "edges": [],
+        "clusters": [{"id": "same"}, {"id": "same"}],
+    }
+    with pytest.raises(ValueError, match="Duplicate cluster"):
+        validate_spec(spec)
+
+
+def test_validate_spec_unknown_parent_cluster():
+    spec = {
+        "nodes": [],
+        "edges": [],
+        "clusters": [{"id": "child", "parent": "missing"}],
+    }
+    with pytest.raises(ValueError, match="unknown parent"):
+        validate_spec(spec)
+
+
+def test_validate_spec_cluster_cycle():
+    spec = {
+        "nodes": [],
+        "edges": [],
+        "clusters": [
+            {"id": "a", "parent": "b"},
+            {"id": "b", "parent": "a"},
+        ],
+    }
+    with pytest.raises(ValueError, match="cycle"):
+        validate_spec(spec)
+
+
+def test_validate_spec_invalid_direction():
+    with pytest.raises(ValueError, match="direction"):
+        validate_spec({"direction": "SIDEWAYS", "nodes": [], "edges": []})
+
+
+def test_validate_spec_invalid_edge_mode():
+    spec = {
+        "nodes": [{"id": "a"}, {"id": "b"}],
+        "edges": [{"from": "a", "to": "b", "mode": "sometimes"}],
+    }
+    with pytest.raises(ValueError, match="invalid mode"):
+        validate_spec(spec)
+
+
+def test_validate_spec_collection_entries_must_be_objects():
+    with pytest.raises(ValueError, match=r"nodes\[0\]"):
+        validate_spec({"nodes": ["not-an-object"], "edges": []})
+
+
+def test_validate_spec_attrs_must_be_objects():
+    spec = {
+        "nodes": [{"id": "a"}, {"id": "b"}],
+        "edges": [{"from": "a", "to": "b", "attrs": ["constraint=false"]}],
+    }
+    with pytest.raises(ValueError, match="attrs"):
+        validate_spec(spec)
+
+
+def test_spec_counts_includes_clusters():
+    spec = {
+        "nodes": [{"id": "a"}, {"id": "b"}],
+        "edges": [{"from": "a", "to": "b"}],
+        "clusters": [{"id": "c"}],
+    }
+    assert spec_counts(spec) == {"nodes": 2, "edges": 1, "clusters": 1}
+
+
+def test_edge_attributes_supports_graphviz_layout_controls():
+    edge = {
+        "from": "a",
+        "to": "b",
+        "label": "top-level wins",
+        "attrs": {"constraint": "false", "minlen": "2", "label": "ignored"},
+    }
+    assert edge_attributes(edge) == {
+        "constraint": "false",
+        "minlen": "2",
+        "label": "top-level wins",
+    }
+
+
+def test_default_graph_title_is_at_top():
+    assert DEFAULT_GRAPH_ATTR["labelloc"] == "t"
 
 
 # ── compare_specs ──

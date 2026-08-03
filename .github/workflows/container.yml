@@ -11,6 +11,7 @@ on:
       - "uv.lock"
       - "src/**"
       - "tests/**"
+      - "examples/**"
   push:
     branches: [main]
     tags: ["v*"]
@@ -44,7 +45,12 @@ jobs:
           '
 
       - name: Run tests in image
-        run: docker run --rm --entrypoint sh diagram-gen:test -c 'cd /app && pytest tests/ -q'
+        run: |
+          docker run --rm --entrypoint sh diagram-gen:test -c '
+            cd /app &&
+            uv run pytest tests/ -q &&
+            uv run python -m py_compile src/agent_diagrams/*.py src/agent_diagrams/renderers/*.py
+          '
 
       - name: Smoke all local renderers in image
         run: |
@@ -64,7 +70,15 @@ jobs:
             test -s /tmp/output/container-smoke.svg &&
             test -s /tmp/output/container-smoke.png &&
             test -s /tmp/output/container-smoke.diagram.svg &&
-            test -s /tmp/output/container-smoke.diagram.png
+            test -s /tmp/output/container-smoke.diagram.png &&
+            diagram-gen spec-batch \
+              --spec-dir /app/examples \
+              --pattern "spec-*.yaml" \
+              --out-dir /tmp/spec-output \
+              --format svg \
+              --format png &&
+            test -s /tmp/spec-output/spec-architecture.svg &&
+            test -s /tmp/spec-output/spec-architecture.png
           '
 
   publish:

@@ -1,0 +1,56 @@
+title: Exact-SHA Documentation Build
+direction: LR
+graph_attr:
+  ranksep: "1.0"
+  nodesep: "0.65"
+clusters:
+  - id: source
+    label: Independently versioned inputs
+    graph_attr:
+      bgcolor: "#eff6ff"
+      color: "#2563eb"
+  - id: delivery
+    label: Generated delivery
+    graph_attr:
+      bgcolor: "#f0fdf4"
+      color: "#15803d"
+nodes:
+  - id: content
+    label: "Content repository\nreviewed source"
+    icon: onprem.vcs.Github
+    cluster: source
+  - id: application
+    label: "Application repository\nbuild owner"
+    icon: programming.language.NodeJS
+    cluster: source
+  - id: actions
+    label: "GitHub Actions\nisolated build"
+    icon: onprem.ci.GithubActions
+  - id: output
+    label: "Generated repository\ndeployment source"
+    icon: onprem.vcs.Git
+    cluster: delivery
+  - id: pages
+    label: Production website
+    icon: saas.cdn.Cloudflare
+    cluster: delivery
+edges:
+  - from: content
+    to: actions
+    label: exact source SHA
+  - from: application
+    to: actions
+    label: build definition
+  - from: actions
+    to: output
+    label: commit generated snapshot
+  - from: output
+    to: pages
+    label: deploy
+  - from: application
+    to: output
+    label: defines output shape
+    style: dashed
+    attrs:
+      constraint: "false"
+      minlen: "2"

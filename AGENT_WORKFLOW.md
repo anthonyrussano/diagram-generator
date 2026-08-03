@@ -24,7 +24,13 @@ For non-Mermaid output (`--diagram-format ...`):
 
 ```bash
 dot -V
-uv run --with diagrams python -c "import diagrams; print(diagrams.__version__)"
+uv run --with diagrams python -c 'from importlib.metadata import version; print(version("diagrams"))'
+```
+
+For authored specs, validate the full set before rendering:
+
+```bash
+uv run diagram-gen spec-batch --spec-dir <spec-dir> --check
 ```
 
 ## 3. Choose Data Sources
@@ -81,6 +87,8 @@ Validate:
 2. Node/edge count is printed.
 3. `.graph.json` has no duplicate node IDs.
 4. Requested output mode files exist (`.svg/.png/.diagram.<fmt>/.zip`).
+
+For multiple authored specs, use `spec-batch` with repeated `--format` flags. Review its aggregate counts and inspect the rendered images at full resolution; Graphviz success alone does not prove that edge routing is readable.
 
 ## 6. Produce Final Artifacts
 

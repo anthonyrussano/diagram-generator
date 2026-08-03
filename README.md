@@ -22,6 +22,7 @@ Detailed setup docs:
 - Agents: [docs/AGENT_SETUP.md](docs/AGENT_SETUP.md)
 - Containers (Podman, Docker, and GHCR): [docs/CONTAINERS.md](docs/CONTAINERS.md)
 - Node icon catalog and resolution: [docs/ICONS.md](docs/ICONS.md)
+- Architecture spec validation, batch rendering, and layout controls: [docs/SPECS.md](docs/SPECS.md)
 
 Quick setup:
 
@@ -115,7 +116,17 @@ uv run diagram-gen --discover --root infra --out-dir output --name account-snaps
 Render from a hand-authored YAML/JSON architecture spec:
 
 ```bash
-uv run diagram-gen spec --spec specs/architecture.yaml --output architecture --format png
+uv run diagram-gen spec --spec examples/spec-architecture.yaml --check
+uv run diagram-gen spec --spec examples/spec-architecture.yaml \
+  --output architecture --format svg --format png
+```
+
+Validate or render a directory of specs in one deterministic batch:
+
+```bash
+uv run diagram-gen spec-batch --spec-dir specs --check
+uv run diagram-gen spec-batch --spec-dir specs --out-dir output \
+  --format svg --format png
 ```
 
 Render current/future states and write a diff summary:
@@ -148,6 +159,7 @@ uv run diagram-gen aws-boto3 --profile <aws-profile> --region us-east-1 --output
 - `output/<name>.blindspots.md`: blind spots report (Markdown)
 - `output/<name>.zip`: optional zip bundle (`--zip-artifacts`)
 - `output/<output>.<fmt>`: spec-driven rendered diagram (`diagram-gen spec`)
+- `output/<relative-spec-path>.<fmt>`: deterministic multi-spec output (`diagram-gen spec-batch`)
 - `output/<prefix>_current.<fmt>`, `output/<prefix>_future.<fmt>`, `output/<prefix>_diff.md`, `output/<prefix>_diff.json` (`diagram-gen compare`)
 - `output/<output>.<fmt>` plus optional exported spec (`diagram-gen k8s discover|annotate`)
 - `output/<output>.graph.json`, `output/<output>.mmd`, `output/<output>.blindspots.json` (`diagram-gen aws-boto3`)

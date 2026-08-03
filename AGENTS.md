@@ -22,10 +22,11 @@ Improve `diagram-gen` so infrastructure diagrams are accurate, reproducible, and
 - `src/agent_diagrams/normalize.py`: dedupe/normalization
 - `src/agent_diagrams/blind_spots.py`: blind spots report generation (JSON + Markdown)
 - `src/agent_diagrams/spec_workflows.py`: spec rendering, validation, and current/future comparison
+- `docs/SPECS.md`: authored-spec schema, batch workflow, and Graphviz layout controls
 - `src/agent_diagrams/live_k8s.py`: live Kubernetes discovery, annotation, and status inference
 - `src/agent_diagrams/aws_boto3_mode.py`: rich AWS boto3 discovery, diagram generation, and GraphData conversion
 - `src/agent_diagrams/renderers/`: output renderers (json, mermaid, diagrams, images)
-- `tests/`: pytest test suite (123 tests) with snapshot golden files
+- `tests/`: pytest test suite with snapshot golden files
 - `prompts/`: reusable execution prompt templates
 - `AGENT_WORKFLOW.md`: operator runbook
 - `docs/AGENT_SETUP.md`: explicit setup and validation commands for agents

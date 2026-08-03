@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import pytest
+
 from agent_diagrams.cli import (
     COMPOSITE_COMMANDS,
     _merge_graphs,
     build_composite_parser,
     build_parser,
+    run_spec_batch_mode,
+    run_spec_mode,
 )
 from agent_diagrams.model import Edge, GraphData, Node
 
@@ -75,7 +79,28 @@ def test_composite_parser_spec():
     args = parser.parse_args(["spec", "--spec", "arch.yaml"])
     assert args.command == "spec"
     assert args.spec == "arch.yaml"
-    assert args.format == "png"
+    assert args.format is None
+    assert args.check is False
+
+
+def test_composite_parser_spec_multiple_formats():
+    parser = build_composite_parser()
+    args = parser.parse_args(
+        ["spec", "--spec", "arch.yaml", "--format", "svg", "--format", "png", "--check"]
+    )
+    assert args.format == ["svg", "png"]
+    assert args.check is True
+
+
+def test_composite_parser_spec_batch():
+    parser = build_composite_parser()
+    args = parser.parse_args(
+        ["spec-batch", "--spec-dir", "specs", "--recursive", "--format", "svg"]
+    )
+    assert args.command == "spec-batch"
+    assert args.spec_dir == "specs"
+    assert args.recursive is True
+    assert args.format == ["svg"]
 
 
 def test_composite_parser_icons():
@@ -136,7 +161,127 @@ def test_composite_parser_k8s_summarize():
 
 
 def test_composite_commands_coverage():
-    assert COMPOSITE_COMMANDS == {"spec", "compare", "k8s", "aws-boto3", "icons"}
+    assert COMPOSITE_COMMANDS == {"spec", "spec-batch", "compare", "k8s", "aws-boto3", "icons"}
+
+
+def test_run_spec_check_prints_counts_without_rendering(tmp_path, monkeypatch, capsys):
+    spec = tmp_path / "arch.yaml"
+    spec.write_text("nodes:\n  - id: a\nedges: []\nclusters: []\n")
+    args = build_composite_parser().parse_args(["spec", "--spec", str(spec), "--check"])
+    monkeypatch.setattr(
+        "agent_diagrams.cli.render_spec_diagram",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("rendered during --check")),
+    )
+
+    run_spec_mode(args)
+
+    output = capsys.readouterr().out
+    assert "Nodes: 1 | Edges: 0 | Clusters: 0" in output
+
+
+def test_run_spec_renders_each_requested_format_once(tmp_path, monkeypatch, capsys):
+    spec = tmp_path / "arch.yaml"
+    spec.write_text("nodes:\n  - id: a\nedges: []\n")
+    calls = []
+
+    def fake_render(state_spec, output_prefix, *, output_format, direction):
+        calls.append((output_prefix, output_format, direction))
+        return output_prefix.with_suffix(f".{output_format}")
+
+    monkeypatch.setattr("agent_diagrams.cli.render_spec_diagram", fake_render)
+    args = build_composite_parser().parse_args(
+        [
+            "spec",
+            "--spec",
+            str(spec),
+            "--out-dir",
+            str(tmp_path / "out"),
+            "--output",
+            "arch",
+            "--format",
+            "svg",
+            "--format",
+            "png",
+        ]
+    )
+
+    run_spec_mode(args)
+
+    assert [call[1] for call in calls] == ["svg", "png"]
+    assert "Diagram generated:" in capsys.readouterr().out
+
+
+def test_run_spec_batch_preserves_relative_paths_and_reports_totals(tmp_path, monkeypatch, capsys):
+    spec_root = tmp_path / "specs"
+    nested = spec_root / "nested"
+    nested.mkdir(parents=True)
+    (spec_root / "one.yaml").write_text("nodes:\n  - id: a\nedges: []\n")
+    (nested / "two.yml").write_text(
+        "nodes:\n  - id: b\n  - id: c\nedges:\n  - from: b\n    to: c\n"
+    )
+    calls = []
+
+    def fake_render(state_spec, output_prefix, *, output_format, direction):
+        calls.append((output_prefix, output_format))
+        return output_prefix.with_suffix(f".{output_format}")
+
+    monkeypatch.setattr("agent_diagrams.cli.render_spec_diagram", fake_render)
+    output_root = tmp_path / "rendered"
+    args = build_composite_parser().parse_args(
+        [
+            "spec-batch",
+            "--spec-dir",
+            str(spec_root),
+            "--recursive",
+            "--out-dir",
+            str(output_root),
+            "--format",
+            "svg",
+            "--format",
+            "png",
+        ]
+    )
+
+    run_spec_batch_mode(args)
+
+    assert len(calls) == 4
+    assert (output_root / "one", "svg") in calls
+    assert (output_root / "nested" / "two", "png") in calls
+    assert "Specs: 2 | Nodes: 3 | Edges: 1 | Clusters: 0 | Artifacts: 4" in capsys.readouterr().out
+
+
+def test_run_spec_batch_validates_every_spec_before_rendering(tmp_path, monkeypatch):
+    spec_root = tmp_path / "specs"
+    spec_root.mkdir()
+    (spec_root / "a-valid.yaml").write_text("nodes:\n  - id: a\nedges: []\n")
+    (spec_root / "z-invalid.yaml").write_text("nodes:\n  - id: a\n  - id: a\nedges: []\n")
+    calls = []
+    monkeypatch.setattr(
+        "agent_diagrams.cli.render_spec_diagram",
+        lambda *args, **kwargs: calls.append((args, kwargs)),
+    )
+    args = build_composite_parser().parse_args(
+        ["spec-batch", "--spec-dir", str(spec_root), "--out-dir", str(tmp_path / "out")]
+    )
+
+    with pytest.raises(ValueError, match="Duplicate node"):
+        run_spec_batch_mode(args)
+
+    assert calls == []
+
+
+def test_run_spec_batch_rejects_output_name_collisions(tmp_path):
+    spec_root = tmp_path / "specs"
+    spec_root.mkdir()
+    content = "nodes:\n  - id: a\nedges: []\n"
+    (spec_root / "same.yaml").write_text(content)
+    (spec_root / "same.json").write_text('{"nodes": [{"id": "a"}], "edges": []}')
+    args = build_composite_parser().parse_args(
+        ["spec-batch", "--spec-dir", str(spec_root), "--check"]
+    )
+
+    with pytest.raises(ValueError, match="would both render"):
+        run_spec_batch_mode(args)
 
 
 # ── _merge_graphs ──

@@ -73,6 +73,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
 COPY tests ./tests
+COPY examples ./examples
 COPY containers/puppeteer-config.json /etc/diagram-gen/puppeteer-config.json
 
 RUN uv sync \
@@ -84,7 +85,8 @@ RUN uv sync \
     && useradd --create-home --uid 1000 --shell /bin/bash diagram \
     && mkdir -p /workspace \
     && mkdir -p /app/.pytest_cache \
-    && chown diagram:diagram /workspace /app/.pytest_cache
+    && chown -R diagram:diagram /app/.venv /app/.pytest_cache /app/src \
+    && chown diagram:diagram /workspace
 
 ENV PATH="/app/.venv/bin:${PATH}"
 
