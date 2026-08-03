@@ -1,0 +1,52 @@
+flowchart LR
+  cli_py["cli.py"]
+  collectors_py["collectors.py"]
+  model_py["model.py<br/>Node / Edge / GraphData"]
+  normalize_py["normalize.py"]
+  blind_spots_py["blind_spots.py"]
+  live_k8s_py["live_k8s.py"]
+  spec_workflows_py["spec_workflows.py"]
+  aws_boto3_mode_py["aws_boto3_mode.py"]
+  renderers_json_renderer_py["renderers/json_renderer.py"]
+  renderers_mermaid_py["renderers/mermaid.py"]
+  renderers_images_py["renderers/images.py"]
+  renderers_diagrams_renderer_py["renderers/diagrams_renderer.py"]
+  pyyaml["PyYAML<br/>required"]
+  diagrams["python-diagrams<br/>optional render extra"]
+  graphviz["Graphviz dot<br/>external executable"]
+  mermaid_runtime["Native mmdc or Docker / Podman<br/>external executable/image"]
+  aws["AWS CLI<br/>external executable"]
+  kubectl["kubectl<br/>external executable"]
+  helm["Helm<br/>external executable"]
+  botocore["boto3 / botocore<br/>optional aws-boto3 extra"]
+  cli_py -->|imports| collectors_py
+  cli_py -->|imports| model_py
+  cli_py -->|imports| normalize_py
+  cli_py -->|imports| blind_spots_py
+  cli_py -->|imports| live_k8s_py
+  cli_py -->|imports| spec_workflows_py
+  cli_py -->|imports| renderers_json_renderer_py
+  cli_py -->|imports| renderers_mermaid_py
+  cli_py -->|imports| renderers_images_py
+  cli_py -->|imports| renderers_diagrams_renderer_py
+  cli_py -->|dynamic import| aws_boto3_mode_py
+  cli_py -->|uses| pyyaml
+  collectors_py -->|imports| model_py
+  collectors_py -->|parses manifests| pyyaml
+  collectors_py -->|subprocess| aws
+  collectors_py -->|subprocess| kubectl
+  collectors_py -->|subprocess| helm
+  normalize_py -->|imports| model_py
+  renderers_json_renderer_py -->|imports| model_py
+  renderers_mermaid_py -->|imports| model_py
+  renderers_diagrams_renderer_py -->|imports| model_py
+  renderers_images_py -->|selects runtime| mermaid_runtime
+  renderers_diagrams_renderer_py -->|optional import| diagrams
+  diagrams -->|executes| graphviz
+  spec_workflows_py -->|imports aliases + SVG helper| renderers_diagrams_renderer_py
+  spec_workflows_py -->|parses specs| pyyaml
+  spec_workflows_py -->|optional import| diagrams
+  live_k8s_py -->|subprocess| kubectl
+  aws_boto3_mode_py -->|imports| botocore
+  aws_boto3_mode_py -->|imports| diagrams
+  aws_boto3_mode_py -->|converts to| model_py

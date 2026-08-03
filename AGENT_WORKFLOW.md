@@ -10,11 +10,15 @@
 
 ## 2. Preflight by Requested Output
 
-For Mermaid image output (`--svg` / `--png`):
+For Mermaid image output (`--svg` / `--png`), check for a native renderer or container engine:
 
 ```bash
+command -v mmdc
 docker --version
+podman --version
 ```
+
+Only one Mermaid runtime is required. `podman compose` is not required.
 
 For non-Mermaid output (`--diagram-format ...`):
 
@@ -39,12 +43,15 @@ Preferred command pattern:
 ```bash
 uv run diagram-gen \
   --discover \
+  --root <input-root> \
   --source aws \
   --profile <profile> \
   --region <region> \
   --out-dir output \
   --name <diagram-name>
 ```
+
+Keep `<input-root>` scoped to infrastructure inputs and outside `--out-dir` so discovery cannot ingest artifacts from prior runs.
 
 Optional output flags:
 
@@ -90,5 +97,5 @@ Always report:
 - Kubernetes context not configured
 - Terraform resources missing when only modules are present without state/json
 - Helm render failures (invalid chart, missing values, or bad templates)
-- Docker unavailable when Mermaid image generation is requested
+- Native Mermaid CLI, Docker, and Podman all unavailable when Mermaid image generation is requested
 - `python-diagrams`/Graphviz unavailable when non-Mermaid rendering is requested

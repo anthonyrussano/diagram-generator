@@ -16,8 +16,12 @@ uv run diagram-gen aws-boto3 --help
 If Mermaid image output is requested (`--svg` / `--png`):
 
 ```bash
+command -v mmdc
 docker --version
+podman --version
 ```
+
+Only one Mermaid runtime is required. Prefer the repository container when external tools are unavailable; see [CONTAINERS.md](CONTAINERS.md). Compose is not required.
 
 If non-Mermaid output is requested (`--diagram-format ...`):
 

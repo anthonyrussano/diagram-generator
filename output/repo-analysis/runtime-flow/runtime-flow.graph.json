@@ -1,0 +1,408 @@
+{
+  "metadata": {
+    "sources": [
+      {
+        "source": "json",
+        "inputs": [
+          "output/repo-analysis/inputs/runtime-flow.json"
+        ]
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "id": "operator",
+      "label": "Operator / CI",
+      "kind": "actor",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "cli",
+      "label": "diagram-gen CLI\ncli.py",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "collectors",
+      "label": "Source collectors\ncollectors.py",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "aws-cli",
+      "label": "AWS CLI APIs",
+      "kind": "aws.iam",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "json-input",
+      "label": "Graph JSON",
+      "kind": "storage",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "terraform-input",
+      "label": "Terraform state / tf.json",
+      "kind": "onprem.terraform",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "k8s-input",
+      "label": "Kubernetes YAML",
+      "kind": "k8s.deploy",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "helm",
+      "label": "helm template",
+      "kind": "k8s.helm",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "kubectl",
+      "label": "kubectl live inventory",
+      "kind": "k8s.svc",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "graph",
+      "label": "GraphData\nNode + Edge contracts",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "normalize",
+      "label": "Merge + deterministic dedupe\nnormalize.py",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "json-renderer",
+      "label": "Canonical JSON renderer",
+      "kind": "storage",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "mermaid-renderer",
+      "label": "Mermaid source renderer",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "diagrams-renderer",
+      "label": "python-diagrams renderer",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "mermaid-images",
+      "label": "Native mmdc or Docker / Podman\nMermaid image rendering",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "graphviz",
+      "label": "python-diagrams + Graphviz",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "artifacts",
+      "label": "Review artifacts\n.graph.json / .mmd / images / zip",
+      "kind": "storage",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "blind-spots",
+      "label": "Blind-spots report\nJSON + Markdown",
+      "kind": "monitoring",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "spec-workflows",
+      "label": "Spec + compare workflows\nspec_workflows.py",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "live-k8s",
+      "label": "Live K8s discovery + annotation\nlive_k8s.py",
+      "kind": "k8s.deploy",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "boto3-mode",
+      "label": "Rich AWS discovery\naws_boto3_mode.py",
+      "kind": "aws.iam",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "spec-input",
+      "label": "Architecture YAML / JSON spec",
+      "kind": "storage",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "boto3",
+      "label": "boto3 / botocore APIs",
+      "kind": "aws.iam",
+      "source": "json",
+      "attrs": {}
+    }
+  ],
+  "edges": [
+    {
+      "src": "operator",
+      "dst": "cli",
+      "rel": "invokes",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "cli",
+      "dst": "collectors",
+      "rel": "dispatches baseline sources",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "aws-cli",
+      "dst": "collectors",
+      "rel": "returns inventory",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "json-input",
+      "dst": "collectors",
+      "rel": "parsed by",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "terraform-input",
+      "dst": "collectors",
+      "rel": "parsed by",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "k8s-input",
+      "dst": "collectors",
+      "rel": "parsed by",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "collectors",
+      "dst": "helm",
+      "rel": "runs for chart input",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "collectors",
+      "dst": "kubectl",
+      "rel": "runs for --live-k8s",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "collectors",
+      "dst": "graph",
+      "rel": "produces independent graphs",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "graph",
+      "dst": "normalize",
+      "rel": "merged and deduplicated",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "normalize",
+      "dst": "json-renderer",
+      "rel": "canonical output",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "normalize",
+      "dst": "mermaid-renderer",
+      "rel": "diagram source",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "normalize",
+      "dst": "diagrams-renderer",
+      "rel": "optional direct render",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "mermaid-renderer",
+      "dst": "mermaid-images",
+      "rel": "optional SVG / PNG",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "diagrams-renderer",
+      "dst": "graphviz",
+      "rel": "optional SVG / PNG / PDF",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "json-renderer",
+      "dst": "artifacts",
+      "rel": "writes",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "mermaid-renderer",
+      "dst": "artifacts",
+      "rel": "writes",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "mermaid-images",
+      "dst": "artifacts",
+      "rel": "writes images",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "graphviz",
+      "dst": "artifacts",
+      "rel": "writes images",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "collectors",
+      "dst": "blind-spots",
+      "rel": "reports partial failures",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "blind-spots",
+      "dst": "artifacts",
+      "rel": "writes when gaps exist",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "cli",
+      "dst": "spec-workflows",
+      "rel": "spec / compare",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "spec-input",
+      "dst": "spec-workflows",
+      "rel": "validated and rendered",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "spec-workflows",
+      "dst": "graphviz",
+      "rel": "renders via diagrams",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "spec-workflows",
+      "dst": "artifacts",
+      "rel": "writes diagrams and diffs",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "cli",
+      "dst": "live-k8s",
+      "rel": "k8s subcommands",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "live-k8s",
+      "dst": "kubectl",
+      "rel": "queries namespaces",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "live-k8s",
+      "dst": "spec-workflows",
+      "rel": "produces annotated spec",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "cli",
+      "dst": "boto3-mode",
+      "rel": "aws-boto3 subcommand",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "boto3-mode",
+      "dst": "boto3",
+      "rel": "queries AWS",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "boto3-mode",
+      "dst": "graph",
+      "rel": "converts inventory",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "boto3-mode",
+      "dst": "graphviz",
+      "rel": "renders rich diagram",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "boto3-mode",
+      "dst": "blind-spots",
+      "rel": "reports API failures",
+      "source": "json",
+      "attrs": {}
+    }
+  ]
+}

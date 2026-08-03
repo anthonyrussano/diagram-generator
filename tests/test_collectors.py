@@ -82,6 +82,18 @@ def test_collect_from_json_graph_format(tmp_path):
     assert g.edges[0].rel == "connects"
 
 
+def test_collect_from_json_uses_repo_relative_metadata_path(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    inputs = tmp_path / "inputs"
+    inputs.mkdir()
+    graph_file = inputs / "graph.json"
+    graph_file.write_text(json.dumps({"nodes": [{"id": "n1"}]}))
+
+    graph = collect_from_json([graph_file.resolve()])
+
+    assert graph.metadata["inputs"] == ["inputs/graph.json"]
+
+
 def test_collect_from_json_opaque_file(tmp_path):
     f = tmp_path / "config.json"
     f.write_text(json.dumps({"setting": "value"}))

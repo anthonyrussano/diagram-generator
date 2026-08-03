@@ -1,0 +1,373 @@
+{
+  "metadata": {
+    "sources": [
+      {
+        "source": "json",
+        "inputs": [
+          "output/repo-analysis/inputs/module-dependencies.json"
+        ]
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "id": "cli.py",
+      "label": "cli.py",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "collectors.py",
+      "label": "collectors.py",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "model.py",
+      "label": "model.py\nNode / Edge / GraphData",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "normalize.py",
+      "label": "normalize.py",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "blind_spots.py",
+      "label": "blind_spots.py",
+      "kind": "monitoring",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "live_k8s.py",
+      "label": "live_k8s.py",
+      "kind": "k8s.deploy",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "spec_workflows.py",
+      "label": "spec_workflows.py",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "aws_boto3_mode.py",
+      "label": "aws_boto3_mode.py",
+      "kind": "aws.iam",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "renderers/json_renderer.py",
+      "label": "renderers/json_renderer.py",
+      "kind": "storage",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "renderers/mermaid.py",
+      "label": "renderers/mermaid.py",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "renderers/images.py",
+      "label": "renderers/images.py",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "renderers/diagrams_renderer.py",
+      "label": "renderers/diagrams_renderer.py",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "pyyaml",
+      "label": "PyYAML\nrequired",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "diagrams",
+      "label": "python-diagrams\noptional render extra",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "graphviz",
+      "label": "Graphviz dot\nexternal executable",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "mermaid-runtime",
+      "label": "Native mmdc or Docker / Podman\nexternal executable/image",
+      "kind": "generic.rack",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "aws",
+      "label": "AWS CLI\nexternal executable",
+      "kind": "aws.iam",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "kubectl",
+      "label": "kubectl\nexternal executable",
+      "kind": "k8s.svc",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "helm",
+      "label": "Helm\nexternal executable",
+      "kind": "k8s.helm",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "id": "botocore",
+      "label": "boto3 / botocore\noptional aws-boto3 extra",
+      "kind": "aws.iam",
+      "source": "json",
+      "attrs": {}
+    }
+  ],
+  "edges": [
+    {
+      "src": "cli.py",
+      "dst": "collectors.py",
+      "rel": "imports",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "cli.py",
+      "dst": "model.py",
+      "rel": "imports",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "cli.py",
+      "dst": "normalize.py",
+      "rel": "imports",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "cli.py",
+      "dst": "blind_spots.py",
+      "rel": "imports",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "cli.py",
+      "dst": "live_k8s.py",
+      "rel": "imports",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "cli.py",
+      "dst": "spec_workflows.py",
+      "rel": "imports",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "cli.py",
+      "dst": "renderers/json_renderer.py",
+      "rel": "imports",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "cli.py",
+      "dst": "renderers/mermaid.py",
+      "rel": "imports",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "cli.py",
+      "dst": "renderers/images.py",
+      "rel": "imports",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "cli.py",
+      "dst": "renderers/diagrams_renderer.py",
+      "rel": "imports",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "cli.py",
+      "dst": "aws_boto3_mode.py",
+      "rel": "dynamic import",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "cli.py",
+      "dst": "pyyaml",
+      "rel": "uses",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "collectors.py",
+      "dst": "model.py",
+      "rel": "imports",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "collectors.py",
+      "dst": "pyyaml",
+      "rel": "parses manifests",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "collectors.py",
+      "dst": "aws",
+      "rel": "subprocess",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "collectors.py",
+      "dst": "kubectl",
+      "rel": "subprocess",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "collectors.py",
+      "dst": "helm",
+      "rel": "subprocess",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "normalize.py",
+      "dst": "model.py",
+      "rel": "imports",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "renderers/json_renderer.py",
+      "dst": "model.py",
+      "rel": "imports",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "renderers/mermaid.py",
+      "dst": "model.py",
+      "rel": "imports",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "renderers/diagrams_renderer.py",
+      "dst": "model.py",
+      "rel": "imports",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "renderers/images.py",
+      "dst": "mermaid-runtime",
+      "rel": "selects runtime",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "renderers/diagrams_renderer.py",
+      "dst": "diagrams",
+      "rel": "optional import",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "diagrams",
+      "dst": "graphviz",
+      "rel": "executes",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "spec_workflows.py",
+      "dst": "renderers/diagrams_renderer.py",
+      "rel": "imports aliases + SVG helper",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "spec_workflows.py",
+      "dst": "pyyaml",
+      "rel": "parses specs",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "spec_workflows.py",
+      "dst": "diagrams",
+      "rel": "optional import",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "live_k8s.py",
+      "dst": "kubectl",
+      "rel": "subprocess",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "aws_boto3_mode.py",
+      "dst": "botocore",
+      "rel": "imports",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "aws_boto3_mode.py",
+      "dst": "diagrams",
+      "rel": "imports",
+      "source": "json",
+      "attrs": {}
+    },
+    {
+      "src": "aws_boto3_mode.py",
+      "dst": "model.py",
+      "rel": "converts to",
+      "source": "json",
+      "attrs": {}
+    }
+  ]
+}

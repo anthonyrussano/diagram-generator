@@ -20,6 +20,7 @@ This repository is structured so autonomous agents and human operators can relia
 Detailed setup docs:
 - Humans: [docs/HUMAN_SETUP.md](docs/HUMAN_SETUP.md)
 - Agents: [docs/AGENT_SETUP.md](docs/AGENT_SETUP.md)
+- Containers (Podman, Docker, and GHCR): [docs/CONTAINERS.md](docs/CONTAINERS.md)
 
 Quick setup:
 
@@ -48,7 +49,7 @@ Base:
 - Python 3.10+
 
 Optional by feature:
-- `docker` for Mermaid image rendering (`--svg` / `--png`)
+- native `mmdc`, Docker, or Podman for Mermaid image rendering (`--svg` / `--png`)
 - Graphviz (`dot`) + `python-diagrams` for non-Mermaid outputs (`--diagram-format`)
 - `boto3`/`botocore` for `diagram-gen aws-boto3`
 
@@ -57,25 +58,44 @@ Optional by feature:
 Discover local files and build baseline artifacts:
 
 ```bash
-uv run diagram-gen --discover --root . --out-dir output --name account-snapshot
+uv run diagram-gen --discover --root infra --out-dir output --name account-snapshot
 ```
 
-Generate Mermaid image files:
+Keep the discovery root scoped to infrastructure inputs and separate from the output directory. Replace `infra` with the folder containing the JSON, Terraform, or Kubernetes files to scan.
+
+Generate Mermaid image files with automatic native/Docker/Podman detection:
 
 ```bash
-uv run diagram-gen --discover --out-dir output --name account-snapshot --svg --png
+uv run diagram-gen --discover --root infra --out-dir output --name account-snapshot --svg --png
+```
+
+Force rootless Podman for Mermaid rendering:
+
+```bash
+uv run diagram-gen --discover --root infra --out-dir output --name account-snapshot \
+  --svg --png --mermaid-runtime container --container-engine podman
+```
+
+Run the fully provisioned project container without installing AWS CLI, kubectl, Helm, Graphviz, or Mermaid CLI on the host:
+
+```bash
+podman build --file Containerfile --tag diagram-gen:local .
+podman run --rm --userns=keep-id --volume "$PWD:/workspace:Z" \
+  diagram-gen:local --source json --json tests/snapshots/simple_graph.graph.json \
+  --out-dir output --name container-smoke --svg --png \
+  --diagram-format svg --diagram-format png
 ```
 
 Generate non-Mermaid architecture images:
 
 ```bash
-uv run diagram-gen --discover --out-dir output --name account-snapshot --diagram-format svg --diagram-format png
+uv run diagram-gen --discover --root infra --out-dir output --name account-snapshot --diagram-format svg --diagram-format png
 ```
 
 Write artifacts into dedicated folder and zip:
 
 ```bash
-uv run diagram-gen --discover --out-dir output --name account-snapshot --artifact-folder --zip-artifacts
+uv run diagram-gen --discover --root infra --out-dir output --name account-snapshot --artifact-folder --zip-artifacts
 ```
 
 Render from a hand-authored YAML/JSON architecture spec:

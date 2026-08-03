@@ -4,7 +4,13 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from agent_diagrams.renderers.images import DEFAULT_IMAGE, extract_mermaid_block, render_mermaid_image
+from agent_diagrams.renderers.images import (
+    CONTAINER_ENGINES,
+    DEFAULT_IMAGE,
+    MERMAID_RUNTIMES,
+    extract_mermaid_block,
+    render_mermaid_image,
+)
 
 
 def main() -> None:
@@ -17,7 +23,9 @@ def main() -> None:
     ap.add_argument("--png", action="store_true")
     ap.add_argument("--theme", type=str, help="Optional theme override (default/dark/forest/neutral).")
     ap.add_argument("--background", type=str, default="transparent", help="transparent or white, etc.")
-    ap.add_argument("--image", type=str, default=DEFAULT_IMAGE, help="Mermaid CLI Docker image.")
+    ap.add_argument("--image", type=str, default=DEFAULT_IMAGE, help="Mermaid CLI container image.")
+    ap.add_argument("--runtime", choices=MERMAID_RUNTIMES, default="auto")
+    ap.add_argument("--container-engine", choices=CONTAINER_ENGINES, default="auto")
     args = ap.parse_args()
 
     if not args.svg and not args.png:
@@ -37,12 +45,28 @@ def main() -> None:
     try:
         if args.svg:
             out_svg = (args.outdir / f"{args.name}.svg").resolve()
-            render_mermaid_image(staged_in, out_svg, image=args.image, background=args.background, theme=args.theme)
+            render_mermaid_image(
+                staged_in,
+                out_svg,
+                image=args.image,
+                background=args.background,
+                theme=args.theme,
+                runtime=args.runtime,
+                container_engine=args.container_engine,
+            )
             print(f"Wrote {out_svg}")
 
         if args.png:
             out_png = (args.outdir / f"{args.name}.png").resolve()
-            render_mermaid_image(staged_in, out_png, image=args.image, background=args.background, theme=args.theme)
+            render_mermaid_image(
+                staged_in,
+                out_png,
+                image=args.image,
+                background=args.background,
+                theme=args.theme,
+                runtime=args.runtime,
+                container_engine=args.container_engine,
+            )
             print(f"Wrote {out_png}")
     except (RuntimeError, ValueError) as exc:
         raise SystemExit(str(exc)) from exc

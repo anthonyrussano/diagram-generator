@@ -1,0 +1,57 @@
+flowchart LR
+  operator["Operator / CI"]
+  cli["diagram-gen CLI<br/>cli.py"]
+  collectors["Source collectors<br/>collectors.py"]
+  aws_cli["AWS CLI APIs"]
+  json_input["Graph JSON"]
+  terraform_input["Terraform state / tf.json"]
+  k8s_input["Kubernetes YAML"]
+  helm["helm template"]
+  kubectl["kubectl live inventory"]
+  n_graph["GraphData<br/>Node + Edge contracts"]
+  normalize["Merge + deterministic dedupe<br/>normalize.py"]
+  json_renderer["Canonical JSON renderer"]
+  mermaid_renderer["Mermaid source renderer"]
+  diagrams_renderer["python-diagrams renderer"]
+  mermaid_images["Native mmdc or Docker / Podman<br/>Mermaid image rendering"]
+  graphviz["python-diagrams + Graphviz"]
+  artifacts["Review artifacts<br/>.graph.json / .mmd / images / zip"]
+  blind_spots["Blind-spots report<br/>JSON + Markdown"]
+  spec_workflows["Spec + compare workflows<br/>spec_workflows.py"]
+  live_k8s["Live K8s discovery + annotation<br/>live_k8s.py"]
+  boto3_mode["Rich AWS discovery<br/>aws_boto3_mode.py"]
+  spec_input["Architecture YAML / JSON spec"]
+  boto3["boto3 / botocore APIs"]
+  operator -->|invokes| cli
+  cli -->|dispatches baseline sources| collectors
+  aws_cli -->|returns inventory| collectors
+  json_input -->|parsed by| collectors
+  terraform_input -->|parsed by| collectors
+  k8s_input -->|parsed by| collectors
+  collectors -->|runs for chart input| helm
+  collectors -->|runs for --live-k8s| kubectl
+  collectors -->|produces independent graphs| n_graph
+  n_graph -->|merged and deduplicated| normalize
+  normalize -->|canonical output| json_renderer
+  normalize -->|diagram source| mermaid_renderer
+  normalize -->|optional direct render| diagrams_renderer
+  mermaid_renderer -->|optional SVG / PNG| mermaid_images
+  diagrams_renderer -->|optional SVG / PNG / PDF| graphviz
+  json_renderer -->|writes| artifacts
+  mermaid_renderer -->|writes| artifacts
+  mermaid_images -->|writes images| artifacts
+  graphviz -->|writes images| artifacts
+  collectors -->|reports partial failures| blind_spots
+  blind_spots -->|writes when gaps exist| artifacts
+  cli -->|spec / compare| spec_workflows
+  spec_input -->|validated and rendered| spec_workflows
+  spec_workflows -->|renders via diagrams| graphviz
+  spec_workflows -->|writes diagrams and diffs| artifacts
+  cli -->|k8s subcommands| live_k8s
+  live_k8s -->|queries namespaces| kubectl
+  live_k8s -->|produces annotated spec| spec_workflows
+  cli -->|aws-boto3 subcommand| boto3_mode
+  boto3_mode -->|queries AWS| boto3
+  boto3_mode -->|converts inventory| n_graph
+  boto3_mode -->|renders rich diagram| graphviz
+  boto3_mode -->|reports API failures| blind_spots
