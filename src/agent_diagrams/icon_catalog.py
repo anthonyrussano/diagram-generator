@@ -12,8 +12,12 @@ from pathlib import Path
 ASSET_ICON_PREFIX = "asset:"
 ICON_ASSET_DIR = Path(__file__).parent / "assets" / "icons"
 
-# Provider order is also the deterministic tie-breaker for ambiguous short names.
-# Canonical provider.category.icon names never need this tie-breaker.
+# Discovery order only; it has no effect on alias resolution. A short class
+# name (e.g. "Firewall") that exists under more than one provider is never
+# given a short-name alias at all (see _builtin_aliases) rather than being
+# resolved via provider precedence, since guessing the wrong provider's icon
+# would be more misleading than falling back to canonical
+# provider.category.icon names, which are always unambiguous.
 DIAGRAM_PROVIDER_ORDER = (
     "programming",
     "saas",
@@ -183,6 +187,30 @@ ICON_ALIASES: dict[str, str] = {
 }
 
 
+# Words that are legitimate exact `kind`/`label` values (a JSON node with
+# kind: "user" should still render a person icon) but resolve to a specific
+# person icon or a single presumed third-party vendor brand, so they are too
+# high-risk to award to one word buried inside a longer, human-written label.
+# Without this guard, "User Authentication Service" or "Users API" matches the
+# word "user(s)" before ever considering "service"/"api", silently rendering a
+# backend service as a person icon; "auth-service" gets branded with the Auth0
+# logo though it may not use Auth0 at all. Other generic infra nouns (e.g.
+# "security", "database", "storage") are deliberately left out of this set:
+# they resolve to generic concept icons, not a specific person or vendor, so
+# matching them as a token (e.g. "security" inside "aws_security_group") is
+# still a reasonable, non-misleading guess. These keys only resolve on a
+# full-string match; they are skipped by the per-token fallback below.
+GENERIC_KIND_ONLY_ALIASES = frozenset(
+    {
+        "user",
+        "users",
+        "actor",
+        "auth",
+        "iam",
+    }
+)
+
+
 FILE_EXTENSION_ICONS = {
     ".bash": "diagrams.programming.language.Bash",
     ".c": "diagrams.programming.language.C",
@@ -315,6 +343,8 @@ def _lookup_named_icon(value: str) -> str | None:
 
     tokens = [normalize_icon_key(token) for token in re.split(r"[^a-zA-Z0-9+#]+", raw) if token]
     for token in tokens:
+        if token in GENERIC_KIND_ONLY_ALIASES:
+            continue
         if token in explicit:
             return explicit[token]
         if token in builtins:

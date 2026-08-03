@@ -46,6 +46,24 @@ def test_resolve_common_devops_icons(kind, label, expected):
     assert resolve_node_icon(kind, label, "node") == expected
 
 
+@pytest.mark.parametrize(
+    ("kind", "label", "node_id", "expected"),
+    [
+        ("component", "user-service", "user-service", "diagrams.k8s.network.Service"),
+        ("component", "users-service", "users-service", "diagrams.k8s.network.Service"),
+        ("component", "auth-service", "auth-service", "diagrams.k8s.network.Service"),
+        ("tf.aws_security_group", "web-sg", "sg-123", "diagrams.generic.network.Firewall"),
+    ],
+)
+def test_generic_person_and_vendor_words_do_not_win_over_other_tokens(kind, label, node_id, expected):
+    assert resolve_node_icon(kind, label, node_id) == expected
+
+
+def test_exact_generic_kind_still_resolves_to_its_dedicated_icon():
+    assert resolve_node_icon("user", "A user", "u1") == "diagrams.onprem.client.User"
+    assert resolve_node_icon("aws.iam", "IAM role", "role") == "diagrams.aws.security.IAM"
+
+
 def test_explicit_node_icon_takes_precedence():
     assert resolve_node_icon(
         "aws.ec2",
