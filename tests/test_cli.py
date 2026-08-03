@@ -22,6 +22,8 @@ def test_build_parser_defaults():
     assert args.name == "infra"
     assert args.source is None
     assert args.discover is False
+    assert args.mermaid_runtime == "auto"
+    assert args.container_engine == "auto"
 
 
 def test_build_parser_sources():
@@ -39,10 +41,23 @@ def test_build_parser_discover():
 
 def test_build_parser_output_flags():
     parser = build_parser()
-    args = parser.parse_args(["--svg", "--png", "--diagram-format", "svg"])
+    args = parser.parse_args(
+        [
+            "--svg",
+            "--png",
+            "--diagram-format",
+            "svg",
+            "--mermaid-runtime",
+            "container",
+            "--container-engine",
+            "podman",
+        ]
+    )
     assert args.svg is True
     assert args.png is True
     assert args.diagram_format == ["svg"]
+    assert args.mermaid_runtime == "container"
+    assert args.container_engine == "podman"
 
 
 def test_build_parser_artifact_flags():

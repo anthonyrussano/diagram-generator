@@ -21,7 +21,12 @@ from .live_k8s import annotate_spec, generate_namespace_spec, summarize_namespac
 from .model import GraphData
 from .normalize import dedupe_graph
 from .renderers.diagrams_renderer import render_with_diagrams
-from .renderers.images import DEFAULT_IMAGE, render_mermaid_image
+from .renderers.images import (
+    CONTAINER_ENGINES,
+    DEFAULT_IMAGE,
+    MERMAID_RUNTIMES,
+    render_mermaid_image,
+)
 from .renderers.json_renderer import render_json
 from .renderers.mermaid import render_mermaid
 from .blind_spots import collect_blind_spots, write_blind_spots_json, write_blind_spots_md
@@ -93,9 +98,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--out-dir", default="output", help="Output directory")
     parser.add_argument("--name", default="infra", help="Output base name")
     parser.add_argument("--direction", default="LR", choices=["LR", "TB", "RL", "BT"], help="Diagram direction")
-    parser.add_argument("--svg", action="store_true", help="Render Mermaid output to SVG using dockerized mermaid-cli")
-    parser.add_argument("--png", action="store_true", help="Render Mermaid output to PNG using dockerized mermaid-cli")
-    parser.add_argument("--mermaid-image", default=DEFAULT_IMAGE, help="Docker image for mermaid-cli")
+    parser.add_argument("--svg", action="store_true", help="Render Mermaid output to SVG")
+    parser.add_argument("--png", action="store_true", help="Render Mermaid output to PNG")
+    parser.add_argument("--mermaid-image", default=DEFAULT_IMAGE, help="Container image for mermaid-cli")
+    parser.add_argument(
+        "--mermaid-runtime",
+        default="auto",
+        choices=MERMAID_RUNTIMES,
+        help="Mermaid image runtime: native mmdc, a container, or automatic detection",
+    )
+    parser.add_argument(
+        "--container-engine",
+        default="auto",
+        choices=CONTAINER_ENGINES,
+        help="Container engine for Mermaid rendering: Docker, Podman, or automatic detection",
+    )
     parser.add_argument("--mermaid-theme", default=None, help="Optional Mermaid theme (default/dark/forest/neutral)")
     parser.add_argument("--mermaid-background", default="transparent", help="Image background color (transparent/white/etc)")
     parser.add_argument(
@@ -474,6 +491,8 @@ def main() -> None:
                     image=args.mermaid_image,
                     background=args.mermaid_background,
                     theme=args.mermaid_theme,
+                    runtime=args.mermaid_runtime,
+                    container_engine=args.container_engine,
                 )
             )
 
@@ -485,6 +504,8 @@ def main() -> None:
                     image=args.mermaid_image,
                     background=args.mermaid_background,
                     theme=args.mermaid_theme,
+                    runtime=args.mermaid_runtime,
+                    container_engine=args.container_engine,
                 )
             )
 

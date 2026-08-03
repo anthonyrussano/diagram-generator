@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
+
+import pytest
 
 from agent_diagrams.model import Node, Edge, GraphData
 from agent_diagrams.renderers.mermaid import (
@@ -13,6 +16,7 @@ from agent_diagrams.renderers.mermaid import (
 )
 from agent_diagrams.renderers.json_renderer import render_json
 from agent_diagrams.renderers.diagrams_renderer import ICON_ALIASES
+from agent_diagrams.renderers import images
 
 SNAPSHOTS_DIR = Path(__file__).parent / "snapshots"
 
@@ -30,6 +34,11 @@ def test_node_id_leading_digit():
 
 def test_node_id_empty():
     assert _node_id("") == "node"
+
+
+@pytest.mark.parametrize("reserved", ["graph", "end", "subgraph", "CLASS"])
+def test_node_id_mermaid_reserved_word(reserved):
+    assert _node_id(reserved).startswith("n_")
 
 
 def test_escape_label_quotes():
@@ -132,3 +141,84 @@ def test_render_json_snapshot(simple_graph, tmp_path):
 def test_icon_aliases_are_dotted_paths():
     for key, value in ICON_ALIASES.items():
         assert "." in value, f"Alias '{key}' maps to non-dotted path '{value}'"
+
+
+# ── Mermaid image runtime coverage ──
+
+
+def test_resolve_container_engine_prefers_docker(monkeypatch):
+    monkeypatch.setattr(images.shutil, "which", lambda name: f"/usr/bin/{name}")
+    assert images._resolve_container_engine("auto") == "docker"
+
+
+def test_resolve_container_engine_falls_back_to_podman(monkeypatch):
+    monkeypatch.setattr(
+        images.shutil,
+        "which",
+        lambda name: "/usr/bin/podman" if name == "podman" else None,
+    )
+    assert images._resolve_container_engine("auto") == "podman"
+
+
+def test_native_mermaid_command(monkeypatch, tmp_path):
+    monkeypatch.setattr(images.shutil, "which", lambda name: "/usr/bin/mmdc" if name == "mmdc" else None)
+    monkeypatch.setenv("MERMAID_PUPPETEER_CONFIG", "/etc/puppeteer.json")
+    captured = []
+    monkeypatch.setattr(images, "_run", lambda cmd: captured.append(cmd))
+
+    source = tmp_path / "input.mmd"
+    source.write_text("flowchart LR\n  a --> b\n")
+    output = tmp_path / "output.svg"
+    images.render_mermaid_image(source, output, runtime="native", theme="dark")
+
+    assert captured == [[
+        "mmdc",
+        "-i",
+        str(source),
+        "-o",
+        str(output),
+        "-b",
+        "transparent",
+        "-t",
+        "dark",
+        "-p",
+        "/etc/puppeteer.json",
+    ]]
+
+
+def test_podman_mermaid_command(monkeypatch, tmp_path):
+    monkeypatch.setattr(images.shutil, "which", lambda name: "/usr/bin/podman" if name == "podman" else None)
+    monkeypatch.setattr(images, "_host_user", lambda: (1234, 5678))
+    captured = []
+    monkeypatch.setattr(images, "_run", lambda cmd: captured.append(cmd))
+
+    source = tmp_path / "input.mmd"
+    source.write_text("flowchart LR\n  a --> b\n")
+    output = tmp_path / "output.png"
+    images.render_mermaid_image(
+        source,
+        output,
+        runtime="container",
+        container_engine="podman",
+    )
+
+    cmd = captured[0]
+    assert cmd[:4] == ["podman", "run", "--rm", "--userns=keep-id"]
+    assert ["-u", "1234:5678"] == cmd[4:6]
+    assert f"{tmp_path}:/data:Z" in cmd
+
+
+def test_run_reports_missing_executable(monkeypatch):
+    def missing(*args, **kwargs):
+        raise FileNotFoundError("missing")
+
+    monkeypatch.setattr(images.subprocess, "run", missing)
+    with pytest.raises(RuntimeError, match="executable: podman"):
+        images._run(["podman", "run"])
+
+
+def test_run_reports_failed_command(monkeypatch):
+    result = subprocess.CompletedProcess(["podman", "run"], 125, "out", "err")
+    monkeypatch.setattr(images.subprocess, "run", lambda *args, **kwargs: result)
+    with pytest.raises(RuntimeError, match="exit_code: 125"):
+        images._run(["podman", "run"])

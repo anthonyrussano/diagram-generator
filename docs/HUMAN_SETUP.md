@@ -2,7 +2,7 @@
 
 This project can generate three output styles:
 - Graph JSON + Mermaid source (always available)
-- Mermaid-rendered image files (`.svg` / `.png`) via Docker
+- Mermaid-rendered image files (`.svg` / `.png`) via native Mermaid CLI, Docker, or Podman
 - Non-Mermaid architecture images (`.diagram.svg/.png/.pdf`) via `python-diagrams` + Graphviz
 
 ## 1. Base Prerequisites
@@ -12,7 +12,7 @@ Required:
 - Python 3.10+
 
 Optional by feature:
-- `docker` for `--svg` / `--png` Mermaid image rendering
+- native `mmdc`, Docker, or Podman for `--svg` / `--png` Mermaid image rendering
 - Graphviz system package (`dot`) for `--diagram-format ...`
 - `boto3` Python dependency for `aws-boto3` mode
 
@@ -45,11 +45,15 @@ uv run diagram-gen --help
 uv run diagram-gen spec --help
 ```
 
-Mermaid Docker rendering:
+Mermaid rendering (one option is sufficient):
 
 ```bash
+command -v mmdc
 docker --version
+podman --version
 ```
+
+For a fully provisioned image that avoids host installs, see [CONTAINERS.md](CONTAINERS.md).
 
 Graphviz rendering:
 
@@ -126,8 +130,13 @@ Check these files to understand what the tool could not discover.
 ## 7. Troubleshooting
 
 `Mermaid image render command failed`:
-- Ensure Docker is running and image pull is allowed.
+- Ensure native `mmdc` works, or that Docker/Podman is running and image pull is allowed.
+- Force a specific engine with `--mermaid-runtime container --container-engine podman` (or `docker`).
 - Override image if needed: `--mermaid-image <image>`.
+
+`podman compose` reports that no provider is installed:
+- Compose is not required by this project; use the documented `podman build` and `podman run` commands.
+- If a separate workflow needs Compose, install `podman-compose` or `docker-compose`.
 
 Non-Mermaid rendering says `No module named 'diagrams'`:
 - Run `uv add diagrams`.

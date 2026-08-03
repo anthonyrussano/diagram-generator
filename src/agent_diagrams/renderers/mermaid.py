@@ -6,6 +6,23 @@ from pathlib import Path
 from agent_diagrams.model import GraphData
 
 
+_RESERVED_NODE_IDS = {
+    "accdescr",
+    "acctitle",
+    "class",
+    "classdef",
+    "click",
+    "default",
+    "direction",
+    "end",
+    "flowchart",
+    "graph",
+    "linkstyle",
+    "style",
+    "subgraph",
+}
+
+
 def _escape_label(text: str) -> str:
     return text.replace('"', "'").replace("\n", "<br/>")
 
@@ -20,6 +37,8 @@ def _node_id(value: str) -> str:
         normalized = f"n_{normalized}"
     if not normalized:
         normalized = "node"
+    if normalized.lower() in _RESERVED_NODE_IDS:
+        normalized = f"n_{normalized}"
     return normalized
 
 
