@@ -15,6 +15,7 @@ ARG KUBECTL_VERSION=v1.36.3
 ARG HELM_VERSION=v4.2.3
 
 LABEL org.opencontainers.image.title="diagram-gen"
+LABEL org.opencontainers.image.source="https://github.com/anthonyrussano/diagram-generator"
 LABEL org.opencontainers.image.description="Reproducible infrastructure diagram generation toolchain"
 
 ENV DEBIAN_FRONTEND=noninteractive \
