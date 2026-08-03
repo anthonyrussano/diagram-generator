@@ -43,6 +43,7 @@ Base CLI:
 ```bash
 uv run diagram-gen --help
 uv run diagram-gen spec --help
+uv run diagram-gen spec-batch --help
 ```
 
 Mermaid rendering (one option is sufficient):
@@ -101,7 +102,17 @@ uv run diagram-gen --discover --root infra --out-dir output --name snapshot --ar
 Render from a YAML/JSON architecture spec:
 
 ```bash
-uv run diagram-gen spec --spec specs/architecture.yaml --output architecture --format png
+uv run diagram-gen spec --spec examples/spec-architecture.yaml --check
+uv run diagram-gen spec --spec examples/spec-architecture.yaml \
+  --output architecture --format svg --format png
+```
+
+Validate or render a directory of authored specs:
+
+```bash
+uv run diagram-gen spec-batch --spec-dir specs --check
+uv run diagram-gen spec-batch --spec-dir specs --out-dir output \
+  --format svg --format png
 ```
 
 Compare current/future architecture states:

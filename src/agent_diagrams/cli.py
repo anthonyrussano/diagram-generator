@@ -36,10 +36,12 @@ from .spec_workflows import (
     load_data_file,
     normalize_state_spec,
     render_spec_diagram,
+    spec_counts,
+    validate_spec,
     write_compare_summary,
 )
 
-COMPOSITE_COMMANDS = {"spec", "compare", "k8s", "aws-boto3", "icons"}
+COMPOSITE_COMMANDS = {"spec", "spec-batch", "compare", "k8s", "aws-boto3", "icons"}
 
 
 def _merge_graphs(graphs: list[GraphData]) -> GraphData:
@@ -80,6 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Generate infrastructure diagrams from AWS, Terraform, JSON, and Kubernetes sources",
         epilog=(
             "Composite workflows are also available: diagram-gen spec --help, "
+            "diagram-gen spec-batch --help, "
             "diagram-gen compare --help, diagram-gen k8s --help, diagram-gen aws-boto3 --help, "
             "diagram-gen icons --help"
         ),
@@ -149,9 +152,35 @@ def build_composite_parser() -> argparse.ArgumentParser:
     spec_parser.add_argument("--state", help="State name when spec contains a 'states' object")
     spec_parser.add_argument("--out-dir", default="output", help="Output directory for relative artifact paths")
     spec_parser.add_argument("--output", "-o", default="architecture", help="Output file prefix")
-    spec_parser.add_argument("--format", default="png", choices=["png", "pdf", "svg"], help="Output format")
+    spec_parser.add_argument(
+        "--format",
+        action="append",
+        choices=["png", "pdf", "svg"],
+        help="Output format; repeat for multiple formats (default: png)",
+    )
     spec_parser.add_argument("--direction", choices=["TB", "LR", "BT", "RL"], help="Override diagram direction")
+    spec_parser.add_argument("--check", action="store_true", help="Validate and print counts without rendering")
     spec_parser.set_defaults(func=run_spec_mode)
+
+    batch_parser = commands.add_parser("spec-batch", help="Validate or render a directory of diagram specs")
+    batch_parser.add_argument("--spec-dir", required=True, help="Directory containing JSON/YAML specs")
+    batch_parser.add_argument(
+        "--pattern",
+        action="append",
+        help="File glob relative to spec-dir; repeat as needed (defaults: *.yaml, *.yml, *.json)",
+    )
+    batch_parser.add_argument("--recursive", action="store_true", help="Search matching specs recursively")
+    batch_parser.add_argument("--state", help="State name when specs contain a 'states' object")
+    batch_parser.add_argument("--out-dir", default="output", help="Output directory")
+    batch_parser.add_argument(
+        "--format",
+        action="append",
+        choices=["png", "pdf", "svg"],
+        help="Output format; repeat for multiple formats (default: png)",
+    )
+    batch_parser.add_argument("--direction", choices=["TB", "LR", "BT", "RL"], help="Override diagram direction")
+    batch_parser.add_argument("--check", action="store_true", help="Validate all specs and print counts without rendering")
+    batch_parser.set_defaults(func=run_spec_batch_mode)
 
     compare_parser = commands.add_parser("compare", help="Render current/future diagrams and produce a diff")
     compare_parser.add_argument("--spec", help="Single spec file containing states.current and states.future")
@@ -208,12 +237,99 @@ def build_composite_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _load_validated_spec(path: Path, state: str | None = None) -> dict:
+    spec = load_data_file(path)
+    state_spec = normalize_state_spec(spec, state=state)
+    validate_spec(state_spec)
+    return state_spec
+
+
+def _requested_formats(args: argparse.Namespace) -> list[str]:
+    return list(dict.fromkeys(args.format or ["png"]))
+
+
+def _print_spec_counts(label: str, spec: dict) -> None:
+    counts = spec_counts(spec)
+    print(
+        f"{label}: Nodes: {counts['nodes']} | Edges: {counts['edges']} | "
+        f"Clusters: {counts['clusters']}"
+    )
+
+
 def run_spec_mode(args: argparse.Namespace) -> None:
-    spec = load_data_file(Path(args.spec))
-    state_spec = normalize_state_spec(spec, state=args.state)
+    spec_path = Path(args.spec).resolve()
+    state_spec = _load_validated_spec(spec_path, state=args.state)
+    _print_spec_counts(f"Spec valid: {spec_path}", state_spec)
+    if args.check:
+        return
+
     output_prefix = _resolve_output_prefix(args.output, args.out_dir)
-    output = render_spec_diagram(state_spec, output_prefix, output_format=args.format, direction=args.direction)
-    print(f"Diagram generated: {output}")
+    for output_format in _requested_formats(args):
+        output = render_spec_diagram(
+            state_spec,
+            output_prefix,
+            output_format=output_format,
+            direction=args.direction,
+        )
+        print(f"Diagram generated: {output}")
+
+
+def _find_spec_files(root: Path, patterns: list[str], recursive: bool) -> list[Path]:
+    finder = root.rglob if recursive else root.glob
+    return sorted({path.resolve() for pattern in patterns for path in finder(pattern) if path.is_file()})
+
+
+def run_spec_batch_mode(args: argparse.Namespace) -> None:
+    spec_root = Path(args.spec_dir).resolve()
+    if not spec_root.is_dir():
+        raise ValueError(f"Spec directory does not exist: {spec_root}")
+
+    patterns = args.pattern or ["*.yaml", "*.yml", "*.json"]
+    spec_paths = _find_spec_files(spec_root, patterns, args.recursive)
+    if not spec_paths:
+        raise ValueError(f"No specs matched in {spec_root}: {', '.join(patterns)}")
+
+    output_root = Path(args.out_dir).resolve()
+    totals = {"nodes": 0, "edges": 0, "clusters": 0}
+    artifact_count = 0
+    formats = _requested_formats(args)
+    loaded_specs: list[tuple[Path, dict]] = []
+    output_sources: dict[Path, Path] = {}
+
+    for index, spec_path in enumerate(spec_paths, start=1):
+        relative_path = spec_path.relative_to(spec_root)
+        output_relative = relative_path.with_suffix("")
+        if output_relative in output_sources:
+            raise ValueError(
+                f"Specs '{output_sources[output_relative]}' and '{relative_path}' "
+                f"would both render to '{output_relative}'. Rename one spec or narrow --pattern."
+            )
+        output_sources[output_relative] = relative_path
+
+        state_spec = _load_validated_spec(spec_path, state=args.state)
+        loaded_specs.append((output_relative, state_spec))
+        _print_spec_counts(f"[{index}/{len(spec_paths)}] Valid: {relative_path}", state_spec)
+        counts = spec_counts(state_spec)
+        for key in totals:
+            totals[key] += counts[key]
+
+    if not args.check:
+        for output_relative, state_spec in loaded_specs:
+            output_prefix = output_root / output_relative
+            for output_format in formats:
+                output = render_spec_diagram(
+                    state_spec,
+                    output_prefix,
+                    output_format=output_format,
+                    direction=args.direction,
+                )
+                artifact_count += 1
+                print(f"Diagram generated: {output}")
+
+    print(
+        f"Specs: {len(spec_paths)} | Nodes: {totals['nodes']} | Edges: {totals['edges']} | "
+        f"Clusters: {totals['clusters']} | Artifacts: {artifact_count}"
+    )
 
 
 def run_icons_mode(args: argparse.Namespace) -> None:

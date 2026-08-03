@@ -25,6 +25,8 @@ DEFAULT_GRAPH_ATTR = {
     "ranksep": "1.0",
     "nodesep": "0.75",
     "pad": "0.4",
+    "labelloc": "t",
+    "labeljust": "c",
     "fontname": "Sans-Serif",
     "fontsize": "13",
 }
@@ -98,36 +100,123 @@ def normalize_state_spec(spec: dict[str, Any], state: str | None = None) -> dict
     return spec
 
 
+def _validate_mapping(value: Any, location: str) -> None:
+    if not isinstance(value, dict):
+        raise ValueError(f"'{location}' must be an object.")
+
+
+def _validate_collection(spec: dict[str, Any], key: str) -> list[dict[str, Any]]:
+    value = spec.get(key, [])
+    if not isinstance(value, list):
+        raise ValueError(f"'{key}' must be a list.")
+    for index, item in enumerate(value):
+        _validate_mapping(item, f"{key}[{index}]")
+    return value
+
+
+def _validate_cluster_hierarchy(clusters: list[dict[str, Any]]) -> None:
+    cluster_by_id = {cluster["id"]: cluster for cluster in clusters}
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(cluster_id: str) -> None:
+        if cluster_id in visited:
+            return
+        if cluster_id in visiting:
+            raise ValueError(f"Cluster hierarchy contains a cycle at '{cluster_id}'.")
+
+        visiting.add(cluster_id)
+        parent = cluster_by_id[cluster_id].get("parent")
+        if parent:
+            if parent not in cluster_by_id:
+                raise ValueError(f"Cluster '{cluster_id}' references unknown parent cluster '{parent}'.")
+            visit(parent)
+        visiting.remove(cluster_id)
+        visited.add(cluster_id)
+
+    for cluster_id in cluster_by_id:
+        visit(cluster_id)
+
+
 def validate_spec(spec: dict[str, Any]) -> None:
-    for key in ("nodes", "edges", "clusters"):
-        if key in spec and not isinstance(spec[key], list):
-            raise ValueError(f"'{key}' must be a list.")
+    nodes = _validate_collection(spec, "nodes")
+    edges = _validate_collection(spec, "edges")
+    clusters = _validate_collection(spec, "clusters")
+
+    direction = spec.get("direction")
+    if direction is not None and direction not in {"TB", "LR", "BT", "RL"}:
+        raise ValueError("'direction' must be one of: TB, LR, BT, RL.")
+
+    for key in ("graph_attr", "node_attr", "edge_attr"):
+        if key in spec:
+            _validate_mapping(spec[key], key)
 
     node_ids: set[str] = set()
-    for node in spec.get("nodes", []):
+    for node in nodes:
         node_id = node.get("id")
-        if not node_id:
+        if not isinstance(node_id, str) or not node_id.strip():
             raise ValueError("Every node must include 'id'.")
         if node_id in node_ids:
             raise ValueError(f"Duplicate node id: '{node_id}'.")
         node_ids.add(node_id)
+        if "attrs" in node:
+            _validate_mapping(node["attrs"], f"node '{node_id}' attrs")
 
-    cluster_ids = {c.get("id") for c in spec.get("clusters", [])}
-    if None in cluster_ids:
-        raise ValueError("Every cluster must include 'id'.")
+    cluster_ids: set[str] = set()
+    for cluster in clusters:
+        cluster_id = cluster.get("id")
+        if not isinstance(cluster_id, str) or not cluster_id.strip():
+            raise ValueError("Every cluster must include 'id'.")
+        if cluster_id in cluster_ids:
+            raise ValueError(f"Duplicate cluster id: '{cluster_id}'.")
+        cluster_ids.add(cluster_id)
+        parent = cluster.get("parent")
+        if parent is not None and (not isinstance(parent, str) or not parent.strip()):
+            raise ValueError(f"Cluster '{cluster_id}' parent must be a non-empty string.")
+        if "graph_attr" in cluster:
+            _validate_mapping(cluster["graph_attr"], f"cluster '{cluster_id}' graph_attr")
 
-    for node in spec.get("nodes", []):
+    _validate_cluster_hierarchy(clusters)
+
+    for node in nodes:
         cluster = node.get("cluster")
+        if cluster is not None and (not isinstance(cluster, str) or not cluster.strip()):
+            raise ValueError(f"Node '{node['id']}' cluster must be a non-empty string.")
         if cluster and cluster not in cluster_ids:
             raise ValueError(f"Node '{node['id']}' references unknown cluster '{cluster}'.")
 
-    for edge in spec.get("edges", []):
+    for edge in edges:
         src = edge.get("from")
         dst = edge.get("to")
-        if not src or not dst:
+        if not isinstance(src, str) or not src.strip() or not isinstance(dst, str) or not dst.strip():
             raise ValueError("Every edge must include 'from' and 'to'.")
         if src not in node_ids or dst not in node_ids:
             raise ValueError(f"Edge '{src} -> {dst}' references unknown nodes.")
+        mode = str(edge.get("mode", "forward")).lower()
+        if mode not in {"forward", "reverse", "undirected"}:
+            raise ValueError(
+                f"Edge '{src} -> {dst}' has invalid mode '{mode}'. "
+                "Use forward, reverse, or undirected."
+            )
+        if "attrs" in edge:
+            _validate_mapping(edge["attrs"], f"edge '{src} -> {dst}' attrs")
+
+
+def spec_counts(spec: dict[str, Any]) -> dict[str, int]:
+    return {
+        "nodes": len(spec.get("nodes", [])),
+        "edges": len(spec.get("edges", [])),
+        "clusters": len(spec.get("clusters", [])),
+    }
+
+
+def edge_attributes(edge: dict[str, Any]) -> dict[str, Any]:
+    attrs = dict(edge.get("attrs") or {})
+    for key in ("label", "color", "style", "penwidth", "dir"):
+        value = edge.get(key)
+        if value is not None:
+            attrs[key] = value
+    return attrs
 
 
 def _resolve_icon(icon: str | None):
@@ -216,18 +305,7 @@ def render_spec_diagram(
         for edge in spec.get("edges", []):
             src = node_objs[edge["from"]]
             dst = node_objs[edge["to"]]
-            edge_kwargs = {
-                k: v
-                for k, v in {
-                    "label": edge.get("label"),
-                    "color": edge.get("color"),
-                    "style": edge.get("style"),
-                    "penwidth": edge.get("penwidth"),
-                    "dir": edge.get("dir"),
-                }.items()
-                if v is not None
-            }
-            edge_obj = Edge(**edge_kwargs)
+            edge_obj = Edge(**edge_attributes(edge))
 
             mode = str(edge.get("mode", "forward")).lower()
             if mode == "reverse":
