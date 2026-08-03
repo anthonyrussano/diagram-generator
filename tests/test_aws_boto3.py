@@ -1,11 +1,12 @@
 """Tests for aws_boto3_mode.py pure functions and GraphData conversion.
 
-Because aws_boto3_mode.py has top-level ``from diagrams import ...`` statements,
-the module cannot be imported without the diagrams package + Graphviz. We inject
-mock modules via sys.modules before importing.
+``aws_boto3_mode.py`` imports optional packages at module load time. Mock only
+packages that are not installed so render-enabled test runs still exercise the
+real diagrams icon modules.
 """
 from __future__ import annotations
 
+import importlib
 import sys
 from unittest.mock import MagicMock
 
@@ -26,7 +27,9 @@ _MOCK_MODULES = [
 ]
 _mocks = {}
 for mod in _MOCK_MODULES:
-    if mod not in sys.modules:
+    try:
+        importlib.import_module(mod)
+    except ImportError:
         _mocks[mod] = MagicMock()
         sys.modules[mod] = _mocks[mod]
 

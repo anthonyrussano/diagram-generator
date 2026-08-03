@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import json
-import importlib
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-from .renderers.diagrams_renderer import ICON_ALIASES, _inline_svg_image_refs
+from .icon_catalog import resolve_spec_icon
+from .renderers.diagrams_renderer import _inline_svg_image_refs, load_icon_factory
 
 try:
     from diagrams import Cluster, Diagram, Edge
@@ -130,25 +130,9 @@ def validate_spec(spec: dict[str, Any]) -> None:
             raise ValueError(f"Edge '{src} -> {dst}' references unknown nodes.")
 
 
-def _dotted_import(path: str):
-    module_name, cls_name = path.rsplit(".", 1)
-    module = importlib.import_module(module_name)
-    return getattr(module, cls_name)
-
-
 def _resolve_icon(icon: str | None):
     require_diagrams()
-    if not icon:
-        return Blank
-
-    key = icon.strip().lower()
-    resolved = ICON_ALIASES.get(key, icon)
-    try:
-        if "." not in resolved:
-            return Blank
-        return _dotted_import(resolved)
-    except Exception:
-        return Blank
+    return load_icon_factory(resolve_spec_icon(icon))
 
 
 def _build_cluster_children(clusters: list[dict[str, Any]]) -> dict[str | None, list[dict[str, Any]]]:

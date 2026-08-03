@@ -15,6 +15,7 @@ from agent_diagrams.renderers.mermaid import (
     render_mermaid,
 )
 from agent_diagrams.renderers.json_renderer import render_json
+from agent_diagrams.icon_catalog import resolve_asset_path
 from agent_diagrams.renderers.diagrams_renderer import ICON_ALIASES
 from agent_diagrams.renderers import images
 
@@ -140,7 +141,10 @@ def test_render_json_snapshot(simple_graph, tmp_path):
 
 def test_icon_aliases_are_dotted_paths():
     for key, value in ICON_ALIASES.items():
-        assert "." in value, f"Alias '{key}' maps to non-dotted path '{value}'"
+        if value.startswith("asset:"):
+            assert resolve_asset_path(value), f"Alias '{key}' maps to missing asset '{value}'"
+        else:
+            assert "." in value, f"Alias '{key}' maps to non-dotted path '{value}'"
 
 
 # ── Mermaid image runtime coverage ──

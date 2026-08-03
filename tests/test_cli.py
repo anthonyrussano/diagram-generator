@@ -78,6 +78,15 @@ def test_composite_parser_spec():
     assert args.format == "png"
 
 
+def test_composite_parser_icons():
+    parser = build_composite_parser()
+    args = parser.parse_args(["icons", "--provider", "programming", "--search", "python", "--json"])
+    assert args.command == "icons"
+    assert args.provider == "programming"
+    assert args.search == "python"
+    assert args.json is True
+
+
 def test_composite_parser_compare_single_spec():
     parser = build_composite_parser()
     args = parser.parse_args(["compare", "--spec", "migration.yaml"])
@@ -127,7 +136,7 @@ def test_composite_parser_k8s_summarize():
 
 
 def test_composite_commands_coverage():
-    assert COMPOSITE_COMMANDS == {"spec", "compare", "k8s", "aws-boto3"}
+    assert COMPOSITE_COMMANDS == {"spec", "compare", "k8s", "aws-boto3", "icons"}
 
 
 # ── _merge_graphs ──

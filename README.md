@@ -21,6 +21,7 @@ Detailed setup docs:
 - Humans: [docs/HUMAN_SETUP.md](docs/HUMAN_SETUP.md)
 - Agents: [docs/AGENT_SETUP.md](docs/AGENT_SETUP.md)
 - Containers (Podman, Docker, and GHCR): [docs/CONTAINERS.md](docs/CONTAINERS.md)
+- Node icon catalog and resolution: [docs/ICONS.md](docs/ICONS.md)
 
 Quick setup:
 
@@ -91,6 +92,19 @@ Generate non-Mermaid architecture images:
 ```bash
 uv run diagram-gen --discover --root infra --out-dir output --name account-snapshot --diagram-format svg --diagram-format png
 ```
+
+Search more than 2,600 available technology and service icons:
+
+```bash
+uv run --extra render diagram-gen icons --search cloudflare
+uv run --extra render diagram-gen icons --search supabase
+uv run --extra render diagram-gen icons --provider programming
+```
+
+Non-Mermaid renders infer branded icons from node kinds, labels, file
+extensions, and explicit `attrs.icon` values. Unknown kinds are reported and
+rendered blank instead of being silently represented by an unrelated icon. See
+[docs/ICONS.md](docs/ICONS.md) for canonical names and JSON/YAML examples.
 
 Write artifacts into dedicated folder and zip:
 

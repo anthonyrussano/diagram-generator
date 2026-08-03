@@ -1,0 +1,40 @@
+title: DevOps icon catalog example
+direction: LR
+clusters:
+  - id: edge
+    label: Edge
+  - id: application
+    label: Application
+  - id: platform
+    label: Platform
+nodes:
+  - id: cloudflare
+    label: Cloudflare
+    icon: cloudflare
+    cluster: edge
+  - id: python-api
+    label: Python API
+    icon: programming.framework.FastAPI
+    cluster: application
+  - id: supabase
+    label: Supabase
+    icon: supabase
+    cluster: platform
+  - id: actions
+    label: GitHub Actions
+    icon: github-actions
+    cluster: platform
+  - id: containers
+    label: Docker
+    icon: onprem.container.Docker
+    cluster: platform
+edges:
+  - from: cloudflare
+    to: python-api
+    label: routes
+  - from: python-api
+    to: supabase
+    label: queries
+  - from: actions
+    to: containers
+    label: builds
