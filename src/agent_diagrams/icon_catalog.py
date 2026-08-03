@@ -14,7 +14,7 @@ ICON_ASSET_DIR = Path(__file__).parent / "assets" / "icons"
 
 # Discovery order only; it has no effect on alias resolution. A short class
 # name (e.g. "Firewall") that exists under more than one provider is never
-# given a short-name alias at all (see _builtin_aliases) rather than being
+# given a short-name alias at all (see _builtin_short_name_aliases) rather than being
 # resolved via provider precedence, since guessing the wrong provider's icon
 # would be more misleading than falling back to canonical
 # provider.category.icon names, which are always unambiguous.
@@ -211,6 +211,10 @@ ICON_ALIASES: dict[str, str] = {
 # the token "gcp"/"k8s" appears in it. Precise cases that would otherwise be
 # lost this way (e.g. a Terraform `aws_security_group`/`aws_iam_role`) get
 # their own explicit full-string alias instead of relying on a bare word.
+# "node" gets the same treatment for a different reason: in this project's
+# own domain vocabulary, "node" is the generic term for a graph entity, so
+# "node-1"/"node-service"/"api-node" would otherwise be branded as Node.js
+# purely because that word is a substring of practically every node id.
 GENERIC_KIND_ONLY_ALIASES = frozenset(
     {
         "network",
@@ -224,6 +228,7 @@ GENERIC_KIND_ONLY_ALIASES = frozenset(
         "googlecloud",
         "kubernetes",
         "k8s",
+        "node",
         "deployment",
         "pod",
         "service",
@@ -336,9 +341,13 @@ def _normalized_explicit_aliases() -> dict[str, str]:
 
 
 @lru_cache(maxsize=1)
-def _builtin_aliases() -> dict[str, str]:
+def _builtin_qualified_aliases() -> dict[str, str]:
+    """Provider-qualified builtin names: provider.category.Class, its
+    diagrams.-prefixed form, and provider.Class. Every key here names its
+    provider explicitly, so it is safe to resolve even when the caller only
+    intended a generic label/kind rather than an explicit icon choice.
+    """
     aliases: dict[str, str] = {}
-    short_names: dict[str, list[IconInfo]] = {}
     provider_names: dict[str, list[IconInfo]] = {}
 
     for icon in discover_builtin_icons():
@@ -347,19 +356,39 @@ def _builtin_aliases() -> dict[str, str]:
         aliases.setdefault(normalize_icon_key(f"diagrams.{icon.name}"), icon.path)
 
         class_name = icon.name.rsplit(".", 1)[-1]
-        short_names.setdefault(normalize_icon_key(class_name), []).append(icon)
         provider_names.setdefault(normalize_icon_key(f"{icon.provider}.{class_name}"), []).append(icon)
 
-    for grouped in (short_names, provider_names):
-        for key, matches in grouped.items():
-            unique_paths = sorted({match.path for match in matches})
-            if len(unique_paths) == 1:
-                aliases.setdefault(key, unique_paths[0])
+    for key, matches in provider_names.items():
+        unique_paths = sorted({match.path for match in matches})
+        if len(unique_paths) == 1:
+            aliases.setdefault(key, unique_paths[0])
 
     return aliases
 
 
-def _lookup_named_icon(value: str) -> str | None:
+@lru_cache(maxsize=1)
+def _builtin_short_name_aliases() -> dict[str, str]:
+    """Bare class names (e.g. "role", "policy", "node") with no provider
+    qualifier. Whether one of these is unambiguous is an accident of what the
+    installed `diagrams` package happens to ship (a class named "Role" only
+    existing under k8s.rbac today doesn't mean "role" means Kubernetes RBAC),
+    so these are only safe when a caller explicitly names an icon, never for
+    inferring an icon from an ordinary kind/label/node id.
+    """
+    short_names: dict[str, list[IconInfo]] = {}
+    for icon in discover_builtin_icons():
+        class_name = icon.name.rsplit(".", 1)[-1]
+        short_names.setdefault(normalize_icon_key(class_name), []).append(icon)
+
+    aliases: dict[str, str] = {}
+    for key, matches in short_names.items():
+        unique_paths = sorted({match.path for match in matches})
+        if len(unique_paths) == 1:
+            aliases[key] = unique_paths[0]
+    return aliases
+
+
+def _lookup_named_icon(value: str, *, allow_ambiguous_short_names: bool) -> str | None:
     raw = value.strip()
     if not raw:
         return None
@@ -371,20 +400,25 @@ def _lookup_named_icon(value: str) -> str | None:
     if key in explicit:
         return explicit[key]
 
-    builtins = _builtin_aliases()
-    if key in builtins:
-        return builtins[key]
+    qualified = _builtin_qualified_aliases()
+    if key in qualified:
+        return qualified[key]
+
+    # `allow_ambiguous_short_names` is only true for an explicitly chosen
+    # icon (attrs.icon, or a bare name passed to resolve_spec_icon). Inferring
+    # an icon from an ordinary kind/label/node id must not consult bare,
+    # unqualified short names at all: see _builtin_short_name_aliases.
+    if allow_ambiguous_short_names:
+        short_names = _builtin_short_name_aliases()
+        if key in short_names:
+            return short_names[key]
 
     # Per-token fallback only draws from the small, hand-reviewed `explicit`
-    # aliases, never the dynamically discovered `builtins` catalog. A short
-    # class name like "Role" or "Policy" happens to be unique to exactly one
-    # provider purely by accident of what ships in the installed `diagrams`
-    # package (e.g. "Role" only exists under k8s.rbac, "Policy" only under
-    # azure.managementgovernance), so an unrelated word inside a label or a
-    # structured `provider_resource_type` kind (like "tf.aws_iam_role") could
-    # silently pick up an arbitrary, wrong-provider icon. `builtins` is still
-    # used for the full-string check above, where a caller names an icon
-    # deliberately (an explicit `attrs.icon`, or a bare canonical class name).
+    # aliases, never the dynamically discovered builtin catalog at all (even
+    # its provider-qualified names): a structured `provider_resource_type`
+    # kind (like "tf.aws_iam_role") must not pick up an unrelated provider's
+    # icon just because one of its underscore-separated words happens to
+    # match some other provider's class name.
     tokens = [normalize_icon_key(token) for token in re.split(r"[^a-zA-Z0-9+#]+", raw) if token]
     for token in tokens:
         if token in GENERIC_KIND_ONLY_ALIASES:
@@ -402,14 +436,14 @@ def resolve_node_icon(
     explicit_icon: str | None = None,
 ) -> str | None:
     if explicit_icon:
-        return _lookup_named_icon(explicit_icon)
+        return _lookup_named_icon(explicit_icon, allow_ambiguous_short_names=True)
 
     suffix = Path(label.strip()).suffix.casefold()
     if suffix in FILE_EXTENSION_ICONS:
         return FILE_EXTENSION_ICONS[suffix]
 
     for candidate in (kind, label, node_id):
-        resolved = _lookup_named_icon(candidate)
+        resolved = _lookup_named_icon(candidate, allow_ambiguous_short_names=False)
         if resolved:
             return resolved
     return None
@@ -418,7 +452,7 @@ def resolve_node_icon(
 def resolve_spec_icon(icon: str | None) -> str | None:
     if not icon:
         return None
-    return _lookup_named_icon(icon)
+    return _lookup_named_icon(icon, allow_ambiguous_short_names=True)
 
 
 def resolve_asset_path(icon_ref: str) -> Path | None:

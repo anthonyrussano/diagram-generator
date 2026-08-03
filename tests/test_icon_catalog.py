@@ -84,6 +84,7 @@ def test_exact_generic_kind_still_resolves_to_its_dedicated_icon():
     assert resolve_node_icon("aws.iam", "IAM role", "role") == "diagrams.aws.security.IAM"
     assert resolve_node_icon("gcp", "Google Cloud", "n") == "diagrams.gcp.compute.ComputeEngine"
     assert resolve_node_icon("kubernetes", "K8s", "n") == "diagrams.k8s.compute.Pod"
+    assert resolve_node_icon("node", "Node runtime", "n1") == "diagrams.programming.language.NodeJS"
 
 
 def test_dynamic_catalog_short_names_do_not_leak_into_token_fallback():
@@ -99,6 +100,31 @@ def test_dynamic_catalog_short_names_do_not_leak_into_token_fallback():
     # must not be consulted for per-token fallback at all.
     assert resolve_node_icon("tf.azurerm_role_assignment", "role-assignment", "n") is None
     assert resolve_node_icon("tf.aws_kms_key", "app-key", "n") is None
+
+
+@pytest.mark.parametrize(
+    ("kind", "label", "node_id"),
+    [
+        ("component", "Role", "n1"),
+        ("component", "Policy", "n2"),
+        ("component", "node-1", "node-1"),
+        ("component", "node-service", "node-service"),
+        ("component", "api-node", "api-node"),
+    ],
+)
+def test_dynamic_short_names_do_not_leak_into_inferred_kind_or_label(kind, label, node_id):
+    # "Role"/"Policy" are unqualified dynamic-catalog short names (unique to
+    # one unrelated provider by accident), and "node" is this project's own
+    # generic term for a graph entity. None of these should win an icon guess
+    # from a bare kind, label, or node id — only an explicit attrs.icon (or a
+    # provider-qualified name) may draw on them.
+    assert resolve_node_icon(kind, label, node_id) is None
+
+
+def test_dynamic_short_names_remain_available_for_explicit_icon_selection():
+    assert resolve_node_icon("x", "x", "x", explicit_icon="Role") == "diagrams.k8s.rbac.Role"
+    assert resolve_node_icon("x", "x", "x", explicit_icon="Policy") == "diagrams.azure.managementgovernance.Policy"
+    assert resolve_spec_icon("Role") == "diagrams.k8s.rbac.Role"
 
 
 def test_explicit_node_icon_takes_precedence():
