@@ -9,6 +9,7 @@ from pathlib import Path
 
 import yaml
 
+from .icon_catalog import list_icon_catalog
 from .collectors import (
     collect_from_aws_cli,
     collect_from_helm_charts,
@@ -20,7 +21,7 @@ from .collectors import (
 from .live_k8s import annotate_spec, generate_namespace_spec, summarize_namespace
 from .model import GraphData
 from .normalize import dedupe_graph
-from .renderers.diagrams_renderer import render_with_diagrams
+from .renderers.diagrams_renderer import render_with_diagrams, unresolved_icon_nodes
 from .renderers.images import (
     CONTAINER_ENGINES,
     DEFAULT_IMAGE,
@@ -38,7 +39,7 @@ from .spec_workflows import (
     write_compare_summary,
 )
 
-COMPOSITE_COMMANDS = {"spec", "compare", "k8s", "aws-boto3"}
+COMPOSITE_COMMANDS = {"spec", "compare", "k8s", "aws-boto3", "icons"}
 
 
 def _merge_graphs(graphs: list[GraphData]) -> GraphData:
@@ -79,7 +80,8 @@ def build_parser() -> argparse.ArgumentParser:
         description="Generate infrastructure diagrams from AWS, Terraform, JSON, and Kubernetes sources",
         epilog=(
             "Composite workflows are also available: diagram-gen spec --help, "
-            "diagram-gen compare --help, diagram-gen k8s --help, diagram-gen aws-boto3 --help"
+            "diagram-gen compare --help, diagram-gen k8s --help, diagram-gen aws-boto3 --help, "
+            "diagram-gen icons --help"
         ),
     )
     parser.add_argument("--source", action="append", choices=["aws", "terraform", "json", "kubernetes"], help="Explicit sources to scan")
@@ -135,6 +137,12 @@ def build_composite_parser() -> argparse.ArgumentParser:
         )
     )
     commands = parser.add_subparsers(dest="command", required=True)
+
+    icons_parser = commands.add_parser("icons", help="List available non-Mermaid node icons")
+    icons_parser.add_argument("--search", help="Filter canonical icon names")
+    icons_parser.add_argument("--provider", help="Filter by provider (for example: programming, saas, aws)")
+    icons_parser.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+    icons_parser.set_defaults(func=run_icons_mode)
 
     spec_parser = commands.add_parser("spec", help="Render a diagram from a JSON/YAML spec")
     spec_parser.add_argument("--spec", required=True, help="Path to spec file")
@@ -206,6 +214,30 @@ def run_spec_mode(args: argparse.Namespace) -> None:
     output_prefix = _resolve_output_prefix(args.output, args.out_dir)
     output = render_spec_diagram(state_spec, output_prefix, output_format=args.format, direction=args.direction)
     print(f"Diagram generated: {output}")
+
+
+def run_icons_mode(args: argparse.Namespace) -> None:
+    icons = list_icon_catalog(search=args.search, provider=args.provider)
+    if args.json:
+        print(
+            json.dumps(
+                [
+                    {
+                        "name": icon.name,
+                        "path": icon.path,
+                        "provider": icon.provider,
+                        "category": icon.category,
+                    }
+                    for icon in icons
+                ],
+                indent=2,
+            )
+        )
+        return
+
+    for icon in icons:
+        print(f"{icon.name}\t{icon.path}")
+    print(f"Icons: {len(icons)}")
 
 
 def run_compare_mode(args: argparse.Namespace) -> None:
@@ -528,6 +560,15 @@ def main() -> None:
         print(f"Wrote {image_path}")
     for diagram_path in rendered_diagrams:
         print(f"Wrote {diagram_path}")
+    if rendered_diagrams:
+        unresolved_icons = unresolved_icon_nodes(merged)
+        if unresolved_icons:
+            print(f"Icon fallbacks: {len(unresolved_icons)} node(s) rendered without a specific icon")
+            for unresolved in unresolved_icons:
+                print(
+                    f"- {unresolved['id']}: kind={unresolved['kind']!r}, "
+                    f"label={unresolved['label']!r}"
+                )
     if args.zip_artifacts:
         archive = shutil.make_archive(str(out_dir / args.name), "zip", root_dir=artifact_dir)
         print(f"Wrote {archive}")

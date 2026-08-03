@@ -81,6 +81,17 @@ Generate non-Mermaid image outputs:
 uv run diagram-gen --discover --root infra --out-dir output --name snapshot --diagram-format svg --diagram-format png
 ```
 
+Search the installed branded/technology icon catalog:
+
+```bash
+uv run --extra render diagram-gen icons --search cloudflare
+uv run --extra render diagram-gen icons --search supabase
+uv run --extra render diagram-gen icons --provider programming
+```
+
+See [ICONS.md](ICONS.md) for canonical icon names, explicit JSON/YAML icon
+selection, automatic filename-language matching, and Mermaid limitations.
+
 Group artifacts into `output/<name>/` and zip bundle:
 
 ```bash
