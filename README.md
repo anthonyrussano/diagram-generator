@@ -58,19 +58,21 @@ Optional by feature:
 Discover local files and build baseline artifacts:
 
 ```bash
-uv run diagram-gen --discover --root . --out-dir output --name account-snapshot
+uv run diagram-gen --discover --root infra --out-dir output --name account-snapshot
 ```
+
+Keep the discovery root scoped to infrastructure inputs and separate from the output directory. Replace `infra` with the folder containing the JSON, Terraform, or Kubernetes files to scan.
 
 Generate Mermaid image files with automatic native/Docker/Podman detection:
 
 ```bash
-uv run diagram-gen --discover --out-dir output --name account-snapshot --svg --png
+uv run diagram-gen --discover --root infra --out-dir output --name account-snapshot --svg --png
 ```
 
 Force rootless Podman for Mermaid rendering:
 
 ```bash
-uv run diagram-gen --discover --out-dir output --name account-snapshot \
+uv run diagram-gen --discover --root infra --out-dir output --name account-snapshot \
   --svg --png --mermaid-runtime container --container-engine podman
 ```
 
@@ -87,13 +89,13 @@ podman run --rm --userns=keep-id --volume "$PWD:/workspace:Z" \
 Generate non-Mermaid architecture images:
 
 ```bash
-uv run diagram-gen --discover --out-dir output --name account-snapshot --diagram-format svg --diagram-format png
+uv run diagram-gen --discover --root infra --out-dir output --name account-snapshot --diagram-format svg --diagram-format png
 ```
 
 Write artifacts into dedicated folder and zip:
 
 ```bash
-uv run diagram-gen --discover --out-dir output --name account-snapshot --artifact-folder --zip-artifacts
+uv run diagram-gen --discover --root infra --out-dir output --name account-snapshot --artifact-folder --zip-artifacts
 ```
 
 Render from a hand-authored YAML/JSON architecture spec:

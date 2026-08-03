@@ -43,12 +43,15 @@ Preferred command pattern:
 ```bash
 uv run diagram-gen \
   --discover \
+  --root <input-root> \
   --source aws \
   --profile <profile> \
   --region <region> \
   --out-dir output \
   --name <diagram-name>
 ```
+
+Keep `<input-root>` scoped to infrastructure inputs and outside `--out-dir` so discovery cannot ingest artifacts from prior runs.
 
 Optional output flags:
 

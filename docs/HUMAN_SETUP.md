@@ -66,25 +66,25 @@ dot -V
 Generate baseline outputs (`.graph.json` + `.mmd`):
 
 ```bash
-uv run diagram-gen --discover --out-dir output --name snapshot
+uv run diagram-gen --discover --root infra --out-dir output --name snapshot
 ```
 
 Generate Mermaid image outputs:
 
 ```bash
-uv run diagram-gen --discover --out-dir output --name snapshot --svg --png
+uv run diagram-gen --discover --root infra --out-dir output --name snapshot --svg --png
 ```
 
 Generate non-Mermaid image outputs:
 
 ```bash
-uv run diagram-gen --discover --out-dir output --name snapshot --diagram-format svg --diagram-format png
+uv run diagram-gen --discover --root infra --out-dir output --name snapshot --diagram-format svg --diagram-format png
 ```
 
 Group artifacts into `output/<name>/` and zip bundle:
 
 ```bash
-uv run diagram-gen --discover --out-dir output --name snapshot --artifact-folder --zip-artifacts
+uv run diagram-gen --discover --root infra --out-dir output --name snapshot --artifact-folder --zip-artifacts
 ```
 
 Render from a YAML/JSON architecture spec:

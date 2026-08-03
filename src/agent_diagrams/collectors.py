@@ -104,8 +104,20 @@ def collect_from_aws_cli(profile: str, region: str) -> GraphData:
     return graph
 
 
+def _metadata_paths(paths: list[Path]) -> list[str]:
+    cwd = Path.cwd().resolve()
+    values: list[str] = []
+    for path in paths:
+        resolved = path.resolve()
+        try:
+            values.append(resolved.relative_to(cwd).as_posix())
+        except ValueError:
+            values.append(str(resolved))
+    return values
+
+
 def collect_from_json(paths: list[Path]) -> GraphData:
-    graph = GraphData(metadata={"source": "json", "inputs": [str(p) for p in paths]})
+    graph = GraphData(metadata={"source": "json", "inputs": _metadata_paths(paths)})
     for path in paths:
         data = json.loads(path.read_text())
         if isinstance(data, dict) and "nodes" in data:
@@ -137,7 +149,7 @@ def collect_from_json(paths: list[Path]) -> GraphData:
 
 
 def collect_from_terraform(paths: list[Path]) -> GraphData:
-    graph = GraphData(metadata={"source": "terraform", "inputs": [str(p) for p in paths]})
+    graph = GraphData(metadata={"source": "terraform", "inputs": _metadata_paths(paths)})
     for path in paths:
         raw = json.loads(path.read_text())
 
@@ -187,7 +199,13 @@ def collect_from_kubernetes(
     use_live_cluster: bool,
     extra_docs: list[dict[str, Any]] | None = None,
 ) -> GraphData:
-    graph = GraphData(metadata={"source": "kubernetes", "inputs": [str(p) for p in manifest_paths], "live": use_live_cluster})
+    graph = GraphData(
+        metadata={
+            "source": "kubernetes",
+            "inputs": _metadata_paths(manifest_paths),
+            "live": use_live_cluster,
+        }
+    )
 
     docs: list[dict[str, Any]] = []
     for path in manifest_paths:
