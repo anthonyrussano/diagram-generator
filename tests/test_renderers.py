@@ -16,7 +16,7 @@ from agent_diagrams.renderers.mermaid import (
 )
 from agent_diagrams.renderers.json_renderer import render_json
 from agent_diagrams.icon_catalog import resolve_asset_path
-from agent_diagrams.renderers.diagrams_renderer import ICON_ALIASES
+from agent_diagrams.renderers.diagrams_renderer import ICON_ALIASES, wrap_graphviz_label
 from agent_diagrams.renderers import images
 
 SNAPSHOTS_DIR = Path(__file__).parent / "snapshots"
@@ -137,6 +137,24 @@ def test_render_json_snapshot(simple_graph, tmp_path):
 
 
 # ── diagrams_renderer coverage ──
+
+
+def test_wrap_graphviz_label_preserves_explicit_lines_and_wraps_long_tokens():
+    label = "eth2 | UP | MTU 1500\nfe80::5f65:a911:906f:c099/64"
+
+    wrapped = wrap_graphviz_label(label, width=20)
+
+    assert wrapped.splitlines() == [
+        "eth2 | UP | MTU 1500",
+        "fe80::5f65:a911:906f",
+        ":c099/64",
+    ]
+    assert all(len(line) <= 20 for line in wrapped.splitlines())
+
+
+def test_wrap_graphviz_label_rejects_invalid_width():
+    with pytest.raises(ValueError, match="at least 1"):
+        wrap_graphviz_label("node", width=0)
 
 
 def test_icon_aliases_are_dotted_paths():

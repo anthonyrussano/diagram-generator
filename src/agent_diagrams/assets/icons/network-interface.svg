@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title">
+  <title id="title">Generic network interface</title>
+  <rect x="20" y="34" width="176" height="188" rx="18" fill="#526674"/>
+  <rect x="196" y="62" width="36" height="28" rx="4" fill="#d8a83e"/>
+  <rect x="196" y="112" width="36" height="28" rx="4" fill="#d8a83e"/>
+  <rect x="196" y="162" width="36" height="28" rx="4" fill="#d8a83e"/>
+  <rect x="48" y="58" width="120" height="72" rx="10" fill="#18242b"/>
+  <path d="M66 80h84v26H66z" fill="#edf4f7"/>
+  <path d="M78 80v14m18-14v14m18-14v14m18-14v14" stroke="#526674" stroke-width="6"/>
+  <circle cx="62" cy="174" r="12" fill="#76c96b"/>
+  <circle cx="128" cy="174" r="12" fill="#76c96b"/>
+  <circle cx="95" cy="199" r="12" fill="#76c96b"/>
+  <path d="M74 174h42m12 12v1a12 12 0 0 1-12 12h-9" fill="none" stroke="#edf4f7" stroke-width="7" stroke-linecap="round"/>
+</svg>

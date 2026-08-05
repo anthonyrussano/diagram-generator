@@ -10,3 +10,7 @@
 Simple Icons' CC0 license does not grant trademark rights. Consumers remain
 responsible for following the applicable brand guidelines when publishing
 diagrams that use brand icons.
+
+`network-interface.svg` is an original, provider-neutral network-interface
+glyph authored for this project. `network-interface.png` is its rasterization
+for Graphviz compatibility. Neither asset contains third-party branding.

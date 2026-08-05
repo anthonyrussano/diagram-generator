@@ -19,9 +19,15 @@ LABEL org.opencontainers.image.source="https://github.com/anthonyrussano/diagram
 LABEL org.opencontainers.image.description="Reproducible infrastructure diagram generation toolchain"
 
 ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    UV_SYSTEM_CERTS=true \
+    NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt \
+    NPM_CONFIG_CAFILE=/etc/ssl/certs/ca-certificates.crt \
     PUPPETEER_SKIP_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     MERMAID_PUPPETEER_CONFIG=/etc/diagram-gen/puppeteer-config.json
@@ -37,6 +43,20 @@ RUN apt-get update \
         less \
         tar \
     && rm -rf /var/lib/apt/lists/*
+
+# Optional public CA certificates can be supplied as BuildKit secrets for
+# intercepted corporate networks. They are copied into the image trust store,
+# while the source files remain outside the build context and image history.
+RUN --mount=type=secret,id=chop_root_ca,required=false \
+    --mount=type=secret,id=netskope_root_ca,required=false \
+    set -eux; \
+    if [ -f /run/secrets/chop_root_ca ]; then \
+        install -m 0644 /run/secrets/chop_root_ca /usr/local/share/ca-certificates/chop-root-ca.crt; \
+    fi; \
+    if [ -f /run/secrets/netskope_root_ca ]; then \
+        install -m 0644 /run/secrets/netskope_root_ca /usr/local/share/ca-certificates/netskope-root-ca.crt; \
+    fi; \
+    update-ca-certificates
 
 COPY --from=uv /uv /uvx /usr/local/bin/
 COPY --from=awscli /usr/local/aws-cli /usr/local/aws-cli

@@ -21,8 +21,8 @@ provider.category.IconClass
 Providers include AWS, Azure, Google Cloud, Alibaba Cloud, IBM, Oracle Cloud,
 DigitalOcean, OpenStack, Kubernetes, Elastic, Firebase, on-premises DevOps
 tools, programming languages/frameworks, and SaaS products. The project also
-bundles a Supabase icon because the upstream `diagrams` package does not
-currently include one.
+bundles Supabase and provider-neutral network-interface icons where the
+upstream `diagrams` package does not provide an appropriate generic glyph.
 
 Examples:
 
@@ -36,6 +36,7 @@ programming.framework.React
 onprem.container.Docker
 onprem.gitops.ArgoCD
 custom.supabase.Supabase
+custom.local.NetworkInterface
 ```
 
 List or search the installed catalog:
@@ -120,10 +121,15 @@ uv run --extra render diagram-gen spec \
   --format svg
 ```
 
-## Bundled brand asset
+## Bundled assets
 
 The Supabase SVG is derived from Simple Icons 16.21.0. A PNG rasterization is
 used for Graphviz compatibility; both are stored locally so rendering remains
 offline and reproducible. See
 `src/agent_diagrams/assets/icons/NOTICE.md` for its source, license, and
 trademark notice.
+
+The project-authored `custom.local.NetworkInterface` asset provides a neutral
+NIC glyph for local-machine inventory without implying AWS, Azure, GCP, or
+another infrastructure provider. Exact `local.network_interface.*` graph kinds
+select it automatically.
