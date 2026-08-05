@@ -40,6 +40,12 @@ def test_normalize_icon_key_handles_language_punctuation():
         ("json.file", "worker.py", "diagrams.programming.language.Python"),
         ("json.file", "frontend.tsx", "diagrams.programming.framework.React"),
         ("tool", "GitHub Actions", "diagrams.onprem.ci.GithubActions"),
+        ("local.host", "Local host", "diagrams.onprem.compute.Server"),
+        ("local.network_interface.ethernet", "eth0", "asset:network-interface.png"),
+        ("local.network_interface.loopback", "lo", "asset:network-interface.png"),
+        ("local.ip_address.ipv4", "10.0.0.1/24", "diagrams.generic.network.Subnet"),
+        ("local.ip_address.ipv6", "fe80::1/64", "diagrams.generic.network.Subnet"),
+        ("local.gateway", "10.0.0.1", "diagrams.generic.network.Router"),
     ],
 )
 def test_resolve_common_devops_icons(kind, label, expected):
@@ -154,27 +160,49 @@ def test_supabase_asset_is_bundled():
     assert path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 
 
-@pytest.mark.parametrize("icon", ["custom.supabase.Supabase", "asset:supabase.png"])
-def test_supabase_catalog_references_are_resolvable(icon):
-    assert resolve_spec_icon(icon) == "asset:supabase.png"
+def test_network_interface_asset_is_bundled():
+    path = resolve_asset_path(resolve_spec_icon("custom.local.NetworkInterface"))
+    assert path is not None
+    assert path.name == "network-interface.png"
+    assert path.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 
 
-def test_custom_icon_is_embedded_in_rendered_svg(tmp_path):
+@pytest.mark.parametrize(
+    ("icon", "expected"),
+    [
+        ("custom.supabase.Supabase", "asset:supabase.png"),
+        ("asset:supabase.png", "asset:supabase.png"),
+        ("custom.local.NetworkInterface", "asset:network-interface.png"),
+        ("asset:network-interface.png", "asset:network-interface.png"),
+    ],
+)
+def test_bundled_catalog_references_are_resolvable(icon, expected):
+    assert resolve_spec_icon(icon) == expected
+
+
+@pytest.mark.parametrize(
+    ("icon", "label"),
+    [
+        ("supabase", "Supabase"),
+        ("custom.local.NetworkInterface", "eth0"),
+    ],
+)
+def test_custom_icon_is_embedded_in_rendered_svg(tmp_path, icon, label):
     require_real_diagrams_package()
     if shutil.which("dot") is None:
         pytest.skip("Graphviz is not installed")
 
     output = render_spec_diagram(
         {
-            "nodes": [{"id": "database", "label": "Supabase", "icon": "supabase"}],
+            "nodes": [{"id": "custom", "label": label, "icon": icon}],
             "edges": [],
         },
-        tmp_path / "supabase",
+        tmp_path / "custom-icon",
         output_format="svg",
     )
 
     rendered = output.read_text(encoding="utf-8")
-    assert "Supabase" in rendered
+    assert label in rendered
     assert "data:image/png;base64" in rendered
 
 
@@ -197,6 +225,7 @@ def test_dynamic_catalog_exposes_diagrams_icons():
     assert "programming.language.Python" in names
     assert "saas.cdn.Cloudflare" in names
     assert "custom.supabase.Supabase" in names
+    assert "custom.local.NetworkInterface" in names
     assert [icon.name.casefold() for icon in icons] == sorted(icon.name.casefold() for icon in icons)
 
 

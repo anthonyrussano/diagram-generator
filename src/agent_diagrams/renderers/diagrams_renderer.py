@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import importlib
 import re
+import textwrap
 from pathlib import Path
 from typing import Callable
 
@@ -30,6 +31,31 @@ DEFAULT_GRAPH_ATTR = {
     "nodesep": "0.75",
     "pad": "0.4",
 }
+
+DEFAULT_LABEL_WIDTH = 20
+
+
+def wrap_graphviz_label(label: str, *, width: int = DEFAULT_LABEL_WIDTH) -> str:
+    """Wrap a display label without changing its source graph value.
+
+    Explicit line breaks are preserved and long tokens (for example IPv6
+    addresses or resource IDs) are split deterministically so labels stay
+    within the spacing reserved around fixed-size icon nodes.
+    """
+    if width < 1:
+        raise ValueError("Graphviz label width must be at least 1.")
+
+    wrapper = textwrap.TextWrapper(
+        width=width,
+        break_long_words=True,
+        break_on_hyphens=False,
+        replace_whitespace=True,
+        drop_whitespace=True,
+    )
+    wrapped_lines: list[str] = []
+    for line in label.split("\n"):
+        wrapped_lines.extend(wrapper.wrap(line) or [""])
+    return "\n".join(wrapped_lines)
 
 
 def _require_diagrams() -> None:
@@ -155,7 +181,7 @@ def render_with_diagrams(
                 node.id,
                 explicit_icon=explicit_icon,
             )
-            node_objs[node.id] = icon_factory(node.label)
+            node_objs[node.id] = icon_factory(wrap_graphviz_label(node.label))
 
         for edge in sorted_edges:
             src = node_objs.get(edge.src)

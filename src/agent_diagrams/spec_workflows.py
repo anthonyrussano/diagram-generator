@@ -8,7 +8,11 @@ from typing import Any
 import yaml
 
 from .icon_catalog import resolve_spec_icon
-from .renderers.diagrams_renderer import _inline_svg_image_refs, load_icon_factory
+from .renderers.diagrams_renderer import (
+    _inline_svg_image_refs,
+    load_icon_factory,
+    wrap_graphviz_label,
+)
 
 try:
     from diagrams import Cluster, Diagram, Edge
@@ -276,7 +280,7 @@ def render_spec_diagram(
                 node_kwargs.update(STATUS_STYLES[status])
             node_kwargs.update(node.get("attrs") or {})
 
-            node_objs[node["id"]] = icon_class(label, **node_kwargs)
+            node_objs[node["id"]] = icon_class(wrap_graphviz_label(label), **node_kwargs)
 
     def render_cluster(cluster: dict[str, Any]) -> None:
         label = str(cluster.get("label") or cluster["id"])

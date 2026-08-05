@@ -14,6 +14,27 @@ Improve `diagram-gen` so infrastructure diagrams are accurate, reproducible, and
 4. Never invent infrastructure entities or relationships.
 5. Report data collection blind spots explicitly.
 
+## Container-First Execution Policy
+
+The repository container is the default execution environment for agents. Use
+it for setup, diagram generation, Graphviz/Mermaid rendering, smoke tests, and
+final validation. Host-side `uv run ...` commands are permitted for a fast
+inner loop, but they do not replace the required container verification.
+
+1. Build or refresh the image before generation and final checks:
+   `./scripts/build-container.sh`
+2. Run `diagram-gen` through the mounted-workspace wrapper:
+   `./scripts/run-container.sh <diagram-gen arguments>`
+3. On this workspace layout, the build wrapper automatically injects the CHOP
+   and Netskope roots from `../helm-charts/network-diagnostics/image/` when
+   present. Override with `DIAGRAM_GEN_CHOP_CA` and
+   `DIAGRAM_GEN_NETSKOPE_CA` only when the approved certificates live elsewhere.
+4. The wrappers prefer Docker and fall back to Podman. Set
+   `CONTAINER_ENGINE=podman` or `CONTAINER_ENGINE=docker` to select explicitly.
+5. Fall back to host execution only when the container engine is unavailable or
+   the container path fails for a documented reason. Report that fallback and
+   the exact failure as a blind spot.
+
 ## Repo Layout
 
 - `src/agent_diagrams/cli.py`: orchestration, argument surface, and composite command dispatch
@@ -27,6 +48,7 @@ Improve `diagram-gen` so infrastructure diagrams are accurate, reproducible, and
 - `src/agent_diagrams/aws_boto3_mode.py`: rich AWS boto3 discovery, diagram generation, and GraphData conversion
 - `src/agent_diagrams/renderers/`: output renderers (json, mermaid, diagrams, images)
 - `tests/`: pytest test suite with snapshot golden files
+- `scripts/`: container-first build, validation, and runtime wrappers for agents
 - `prompts/`: reusable execution prompt templates
 - `AGENT_WORKFLOW.md`: operator runbook
 - `docs/AGENT_SETUP.md`: explicit setup and validation commands for agents
@@ -41,11 +63,10 @@ Improve `diagram-gen` so infrastructure diagrams are accurate, reproducible, and
 
 ## Required Checks Before Finishing
 
-1. `uv run pytest tests/ -v` (all tests must pass)
-2. `uv run python -m py_compile src/agent_diagrams/*.py src/agent_diagrams/renderers/*.py`
-3. `uv run diagram-gen --help`
-4. At least one smoke run of `uv run diagram-gen` with selected sources.
-5. Verify output files exist and node/edge counts are printed.
+1. `./scripts/build-container.sh`
+2. `./scripts/check-container.sh` (tests, compilation, and CLI help must pass)
+3. At least one smoke run of `./scripts/run-container.sh` with selected sources.
+4. Verify output files exist and node/edge counts are printed.
 
 When feature flags are requested, validate them too:
 - Mermaid images: smoke with `--svg --png`.

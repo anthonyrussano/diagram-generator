@@ -101,6 +101,13 @@ ICON_ALIASES: dict[str, str] = {
     "k8s.crd": "diagrams.k8s.others.CRD",
     "azure.activedirectory": "diagrams.azure.identity.ActiveDirectory",
     "azure.entra": "diagrams.azure.identity.ActiveDirectory",
+    "local.host": "diagrams.onprem.compute.Server",
+    "local.network_interface": f"{ASSET_ICON_PREFIX}network-interface.png",
+    "local.network_interface.ethernet": f"{ASSET_ICON_PREFIX}network-interface.png",
+    "local.network_interface.loopback": f"{ASSET_ICON_PREFIX}network-interface.png",
+    "local.ip_address.ipv4": "diagrams.generic.network.Subnet",
+    "local.ip_address.ipv6": "diagrams.generic.network.Subnet",
+    "local.gateway": "diagrams.generic.network.Router",
     "network": "diagrams.onprem.network.Internet",
     "internet": "diagrams.onprem.network.Internet",
     "user": "diagrams.onprem.client.User",
@@ -127,6 +134,7 @@ ICON_ALIASES: dict[str, str] = {
     "supabase.functions": f"{ASSET_ICON_PREFIX}supabase.png",
     "supabase.storage": f"{ASSET_ICON_PREFIX}supabase.png",
     "custom.supabase.supabase": f"{ASSET_ICON_PREFIX}supabase.png",
+    "custom.local.networkinterface": f"{ASSET_ICON_PREFIX}network-interface.png",
     "github.actions": "diagrams.onprem.ci.GithubActions",
     "githubactions": "diagrams.onprem.ci.GithubActions",
     "gitlab.ci": "diagrams.onprem.ci.GitlabCI",
@@ -478,6 +486,14 @@ def list_icon_catalog(*, search: str | None = None, provider: str | None = None)
             path=f"{ASSET_ICON_PREFIX}supabase.png",
             provider="custom",
             category="supabase",
+        )
+    )
+    icons.append(
+        IconInfo(
+            name="custom.local.NetworkInterface",
+            path=f"{ASSET_ICON_PREFIX}network-interface.png",
+            provider="custom",
+            category="local",
         )
     )
 

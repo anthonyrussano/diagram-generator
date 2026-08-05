@@ -3,34 +3,36 @@
 ## 1. Establish Context
 
 1. Confirm repository root.
-2. Confirm tool availability: `uv`, `aws`, `kubectl`, `helm`, `git`.
-3. Run `uv sync` before any generation or validation.
-4. Confirm AWS identity when using AWS scan:
-   - `aws --profile <profile> --region <region> sts get-caller-identity`
+2. Confirm Docker or Podman is available.
+3. Run `./scripts/build-container.sh` before generation or validation. It uses
+   the layer cache and injects the approved sibling-repository CAs when present.
+4. Use `./scripts/run-container.sh` for all `diagram-gen` commands by default.
+   Host-side `uv` is a fallback or fast inner loop, not final verification.
+5. Confirm AWS identity when using AWS scan:
+   - Mount the required AWS configuration as described in `docs/CONTAINERS.md`.
+   - Run `aws sts get-caller-identity` in the selected container context before collection.
 
 ## 2. Preflight by Requested Output
 
-For Mermaid image output (`--svg` / `--png`), check for a native renderer or container engine:
+For Mermaid image output (`--svg` / `--png`), smoke the native renderer included
+in the image:
 
 ```bash
-command -v mmdc
-docker --version
-podman --version
+./scripts/run-container.sh --source json --json <input.json> --out-dir output --name preflight-mermaid --svg --png
 ```
 
-Only one Mermaid runtime is required. `podman compose` is not required.
+No host Mermaid CLI, browser, Compose service, or mounted container socket is required.
 
-For non-Mermaid output (`--diagram-format ...`):
+For non-Mermaid output (`--diagram-format ...`), smoke the bundled Graphviz runtime:
 
 ```bash
-dot -V
-uv run --with diagrams python -c 'from importlib.metadata import version; print(version("diagrams"))'
+./scripts/run-container.sh --source json --json <input.json> --out-dir output --name preflight-graphviz --diagram-format svg
 ```
 
 For authored specs, validate the full set before rendering:
 
 ```bash
-uv run diagram-gen spec-batch --spec-dir <spec-dir> --check
+./scripts/run-container.sh spec-batch --spec-dir <spec-dir> --check
 ```
 
 ## 3. Choose Data Sources
@@ -47,7 +49,7 @@ Use one or more:
 Preferred command pattern:
 
 ```bash
-uv run diagram-gen \
+./scripts/run-container.sh \
   --discover \
   --root <input-root> \
   --source aws \
@@ -72,14 +74,13 @@ Optional output flags:
 Run required checks:
 
 ```bash
-uv run python -m py_compile src/agent_diagrams/*.py src/agent_diagrams/renderers/*.py
-uv run diagram-gen --help
+./scripts/check-container.sh
 ```
 
 Then run at least one smoke command:
 
 ```bash
-uv run diagram-gen --source json --json <input.json> --out-dir output --name smoke
+./scripts/run-container.sh --source json --json <input.json> --out-dir output --name smoke
 ```
 
 Validate:

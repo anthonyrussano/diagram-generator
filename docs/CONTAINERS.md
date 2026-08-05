@@ -14,6 +14,20 @@ The image includes:
 
 Mermaid uses native `mmdc` inside the image. This is intentional: no Docker or Podman socket needs to be mounted into the container.
 
+## Agent default
+
+Repository agents use the container path by default through checked-in wrappers:
+
+```bash
+./scripts/build-container.sh
+./scripts/check-container.sh
+./scripts/run-container.sh --help
+```
+
+The build wrapper automatically discovers the approved CHOP and Netskope CA
+files in a sibling `helm-charts` checkout when present. The check wrapper runs
+the full test suite, compilation check, and CLI help inside the built image.
+
 ## Build locally
 
 Podman (recommended on this host):
@@ -27,6 +41,27 @@ Docker:
 ```bash
 docker build --file Containerfile --tag diagram-gen:local .
 ```
+
+### Corporate CA injection
+
+If TLS inspection requires additional public root CAs during the build, pass
+them as BuildKit secrets. The files are installed into the image's system trust
+store without being copied into this repository or sent as ordinary build
+context files:
+
+```bash
+docker build \
+  --secret id=chop_root_ca,src=/path/to/choprootca.crt \
+  --secret id=netskope_root_ca,src=/path/to/netskope-root-ca.crt \
+  --file Containerfile \
+  --tag diagram-gen:local \
+  .
+```
+
+Use only organization-approved CA files and verify their fingerprints before
+building. The CA contents become part of the final image trust store. Builds
+without these optional secrets continue to use the base image's standard trust
+store.
 
 The build pins default tool versions with `ARG` values in `Containerfile`. Override a version when testing an upgrade:
 
