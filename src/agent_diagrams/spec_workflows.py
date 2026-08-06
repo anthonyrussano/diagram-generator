@@ -15,12 +15,12 @@ from .renderers.diagrams_renderer import (
 )
 
 try:
-    from diagrams import Cluster, Diagram, Edge
+    from diagrams import Cluster, Diagram, Edge, Node
     from diagrams.generic.blank import Blank
 
     DIAGRAMS_IMPORT_ERROR = None
 except Exception as exc:  # pragma: no cover - environment dependent
-    Cluster = Diagram = Edge = Blank = None
+    Cluster = Diagram = Edge = Node = Blank = None
     DIAGRAMS_IMPORT_ERROR = exc
 
 
@@ -38,6 +38,17 @@ DEFAULT_GRAPH_ATTR = {
 DEFAULT_NODE_ATTR = {
     "fontname": "Sans-Serif",
     "fontsize": "11",
+    "shape": "box",
+    "style": "rounded,filled",
+    "fillcolor": "#ffffff",
+    "margin": "0.12,0.08",
+}
+
+PLAIN_NODE_ATTR = {
+    "fixedsize": "false",
+    "labelloc": "c",
+    "width": "1.4",
+    "height": "0.6",
 }
 
 DEFAULT_EDGE_ATTR = {
@@ -223,9 +234,27 @@ def edge_attributes(edge: dict[str, Any]) -> dict[str, Any]:
     return attrs
 
 
-def _resolve_icon(icon: str | None):
+def _resolve_icon(icon: str | None, *, node_id: str):
     require_diagrams()
-    return load_icon_factory(resolve_spec_icon(icon))
+    if not icon:
+        return Node
+
+    icon_ref = resolve_spec_icon(icon)
+    if icon_ref is None:
+        raise ValueError(f"Node '{node_id}' references unknown icon '{icon}'.")
+
+    icon_factory = load_icon_factory(icon_ref)
+    if icon_factory is Blank and icon_ref != "diagrams.generic.blank.Blank":
+        raise ValueError(f"Node '{node_id}' could not load icon '{icon}' ({icon_ref}).")
+    return icon_factory
+
+
+def _plain_node_attributes(global_node_attr: dict[str, Any]) -> dict[str, str]:
+    return {
+        key: value
+        for key, value in PLAIN_NODE_ATTR.items()
+        if key not in global_node_attr
+    }
 
 
 def _build_cluster_children(clusters: list[dict[str, Any]]) -> dict[str | None, list[dict[str, Any]]]:
@@ -258,6 +287,7 @@ def render_spec_diagram(
 
     node_attr = dict(DEFAULT_NODE_ATTR)
     node_attr.update(spec.get("node_attr") or {})
+    plain_node_attr = _plain_node_attributes(spec.get("node_attr") or {})
 
     edge_attr = dict(DEFAULT_EDGE_ATTR)
     edge_attr.update(spec.get("edge_attr") or {})
@@ -271,10 +301,12 @@ def render_spec_diagram(
 
     def render_nodes_for_cluster(cluster_id: str | None) -> None:
         for node in nodes_by_cluster.get(cluster_id, []):
-            icon_class = _resolve_icon(node.get("icon"))
+            icon_class = _resolve_icon(node.get("icon"), node_id=node["id"])
             label = str(node.get("label") or node.get("name") or node["id"])
 
             node_kwargs: dict[str, str] = {}
+            if not node.get("icon"):
+                node_kwargs.update(plain_node_attr)
             status = str(node.get("status", "")).lower()
             if status in STATUS_STYLES:
                 node_kwargs.update(STATUS_STYLES[status])

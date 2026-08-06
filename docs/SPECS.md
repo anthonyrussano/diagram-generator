@@ -75,7 +75,7 @@ Top-level fields:
 - `direction`: `TB`, `LR`, `BT`, or `RL`.
 - `graph_attr`, `node_attr`, `edge_attr`: default Graphviz attributes.
 - `clusters`: optional visual groups. A cluster can name another cluster with `parent`.
-- `nodes`: entities with stable `id` values, labels, explicit icons, optional cluster membership, status, and Graphviz `attrs`. Graphviz output preserves authored line breaks and automatically wraps long label lines, including unbroken resource IDs and IP addresses, to prevent text overlap around fixed-size icon nodes.
+- `nodes`: entities with stable `id` values, labels, optional explicit icons, optional cluster membership, status, and Graphviz `attrs`. A node without `icon` renders as a dynamically sized rounded Graphviz box, so its wrapped label remains inside the node. A node with an unknown or unloadable explicit icon fails the render instead of silently producing a blank placeholder. Graphviz output preserves authored line breaks and automatically wraps long label lines, including unbroken resource IDs and IP addresses, to prevent text overlap around fixed-size icon nodes.
 - `edges`: relationships using `from` and `to` node IDs.
 
 The validator rejects malformed collections, duplicate node or cluster IDs, unknown cluster references, cyclic cluster parents, unknown edge endpoints, invalid directions, invalid edge modes, and non-object attribute blocks before rendering begins.
