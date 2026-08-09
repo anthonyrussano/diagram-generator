@@ -15,7 +15,7 @@ from agent_diagrams.icon_catalog import (
 )
 from agent_diagrams.model import GraphData, Node
 from agent_diagrams.renderers.diagrams_renderer import unresolved_icon_nodes
-from agent_diagrams.spec_workflows import render_spec_diagram
+from agent_diagrams.spec_workflows import _plain_node_attributes, render_spec_diagram
 
 
 def require_real_diagrams_package():
@@ -204,6 +204,69 @@ def test_custom_icon_is_embedded_in_rendered_svg(tmp_path, icon, label):
     rendered = output.read_text(encoding="utf-8")
     assert label in rendered
     assert "data:image/png;base64" in rendered
+
+
+def test_iconless_spec_node_renders_as_plain_label_box(tmp_path):
+    require_real_diagrams_package()
+    if shutil.which("dot") is None:
+        pytest.skip("Graphviz is not installed")
+
+    output = render_spec_diagram(
+        {
+            "nodes": [
+                {
+                    "id": "concept",
+                    "label": "Conceptual service with a deliberately long label",
+                }
+            ],
+            "edges": [],
+        },
+        tmp_path / "plain-node",
+        output_format="svg",
+    )
+
+    rendered = output.read_text(encoding="utf-8")
+    assert "Conceptual service" in rendered
+    assert "<image" not in rendered
+    assert "blank.png" not in rendered
+
+
+def test_plain_node_attributes_disable_fixed_icon_dimensions_unless_overridden():
+    assert _plain_node_attributes({}) == {
+        "fixedsize": "false",
+        "labelloc": "c",
+        "width": "1.4",
+        "height": "0.6",
+    }
+    assert _plain_node_attributes({"fixedsize": "true", "width": "2.0"}) == {
+        "labelloc": "c",
+        "height": "0.6",
+    }
+
+
+def test_unknown_explicit_spec_icon_fails_instead_of_rendering_blank(tmp_path):
+    require_real_diagrams_package()
+    if shutil.which("dot") is None:
+        pytest.skip("Graphviz is not installed")
+
+    with pytest.raises(
+        ValueError,
+        match=r"Node 'broken' references unknown icon 'vendor\.missing\.Icon'",
+    ):
+        render_spec_diagram(
+            {
+                "nodes": [
+                    {
+                        "id": "broken",
+                        "label": "Broken icon",
+                        "icon": "vendor.missing.Icon",
+                    }
+                ],
+                "edges": [],
+            },
+            tmp_path / "broken-icon",
+            output_format="svg",
+        )
 
 
 def test_unknown_icons_are_reported_deterministically():
