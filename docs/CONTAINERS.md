@@ -180,6 +180,12 @@ Container-based rendering defaults to the official, versioned Mermaid CLI image 
 
 ## Pull from GitHub Container Registry
 
+`:latest` is a mutable tag: once pulled, an engine keeps using the cached
+digest and will not notice a newer image on its own. Agents and scripts using
+this path must pull immediately before each run rather than assuming a prior
+pull is still current, especially right after merging to `main` — the publish
+workflow takes a few minutes to finish pushing the new image.
+
 After the publishing workflow completes:
 
 ```bash
