@@ -167,7 +167,7 @@ def render_with_diagrams(
         title,
         filename=str(output_prefix),
         show=False,
-        outformat=output_format,
+        outformat="dot" if output_format == "drawio" else output_format,
         direction=direction,
         graph_attr=graph_attr,
     ):
@@ -191,6 +191,10 @@ def render_with_diagrams(
             src >> Edge(label=edge.rel) >> dst
 
     output_path = output_prefix.parent / f"{output_prefix.name}.{output_format}"
+    if output_format == "drawio":
+        from .drawio import export_dot_to_drawio
+
+        export_dot_to_drawio(output_prefix.with_name(output_prefix.name + ".dot"), output_path)
     if output_format == "svg":
         _inline_svg_image_refs(output_path)
     return output_path

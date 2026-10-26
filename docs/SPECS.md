@@ -37,6 +37,11 @@ Batch mode searches `*.yaml`, `*.yml`, and `*.json` by default. Add `--recursive
 
 Both commands print per-spec node, edge, and cluster counts. Batch mode also prints aggregate counts and the number of rendered artifacts.
 
+Add `--format drawio` to either command for editable diagrams, or use it in
+`compare`, `k8s discover`, and `k8s annotate`. See
+[AUTHORING_AND_EXPORT.md](AUTHORING_AND_EXPORT.md) for export fidelity and the
+separate trusted Python authoring workflow.
+
 ## Spec structure
 
 ```yaml

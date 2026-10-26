@@ -4,6 +4,10 @@ This project can generate three output styles:
 - Graph JSON + Mermaid source (always available)
 - Mermaid-rendered image files (`.svg` / `.png`) via native Mermaid CLI, Docker, or Podman
 - Non-Mermaid architecture images (`.diagram.svg/.png/.pdf`) via `python-diagrams` + Graphviz
+- Editable `.drawio` diagrams via the same Graphviz toolchain
+
+HCL parsing is installed with the base project. For richer manifest relationships,
+editable exports, and trusted Python authoring, see [AUTHORING_AND_EXPORT.md](AUTHORING_AND_EXPORT.md).
 
 ## 1. Base Prerequisites
 
@@ -137,7 +141,7 @@ uv run diagram-gen aws-boto3 --profile <aws-profile> --region us-east-1 --output
 ## 5. Running Tests
 
 ```bash
-uv sync --extra dev
+uv sync --extra dev --extra render
 uv run pytest tests/ -v
 ```
 

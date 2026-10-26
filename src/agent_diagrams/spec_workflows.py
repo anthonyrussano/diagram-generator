@@ -328,7 +328,7 @@ def render_spec_diagram(
         title,
         filename=str(output_prefix),
         show=False,
-        outformat=output_format,
+        outformat="dot" if output_format == "drawio" else output_format,
         direction=render_direction,
         graph_attr=graph_attr,
         node_attr=node_attr,
@@ -352,6 +352,10 @@ def render_spec_diagram(
                 src >> edge_obj >> dst
 
     output_path = output_prefix.parent / f"{output_prefix.name}.{output_format}"
+    if output_format == "drawio":
+        from .renderers.drawio import export_dot_to_drawio
+
+        export_dot_to_drawio(output_prefix.with_name(output_prefix.name + ".dot"), output_path)
     if output_format == "svg":
         _inline_svg_image_refs(output_path)
     return output_path

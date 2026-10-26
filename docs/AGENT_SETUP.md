@@ -31,6 +31,7 @@ pwd
 ./scripts/run-container.sh spec --help
 ./scripts/run-container.sh spec-batch --help
 ./scripts/run-container.sh aws-boto3 --help
+./scripts/run-container.sh python --help
 ```
 
 If Mermaid image output is requested (`--svg` / `--png`):
@@ -105,10 +106,22 @@ Artifact packaging smoke:
 
 ## 4. Blind Spots Reporting
 
+New feature smoke commands (see [AUTHORING_AND_EXPORT.md](AUTHORING_AND_EXPORT.md)):
+
+```bash
+./scripts/run-container.sh --source terraform --terraform examples/terraform-hcl --name smoke-hcl --diagram-format drawio
+./scripts/run-container.sh --source kubernetes --k8s examples/k8s-relationships.yaml --name smoke-manifests --diagram-format drawio
+./scripts/run-container.sh python --script examples/python-architecture.py --output smoke-python --format png --format drawio
+```
+
+Inspect draw.io XML for separate editable nodes/edges and embedded icons. Use only
+trusted Python scripts; this mode executes code.
+
 When collector errors occur, `.blindspots.json` and `.blindspots.md` artifacts are emitted alongside other outputs. These report:
 - Collection errors (API failures, missing credentials)
 - Empty sources (sources that returned no resources)
 - Unqueryable resources and permission denials
+- Static collection warnings (unresolved references, partial files, unexpanded modules)
 
 ## 5. Reporting Requirements
 

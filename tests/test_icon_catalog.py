@@ -76,6 +76,10 @@ def test_generic_infra_nouns_do_not_win_a_guess_from_an_unrelated_label(kind, la
         ("tf.aws_security_group", "web-sg", "diagrams.generic.network.Firewall"),
         ("tf.aws_iam_role", "app-role", "diagrams.aws.security.IAMRole"),
         ("tf.aws_iam_policy", "app-policy", "diagrams.aws.security.IAMPermissions"),
+        ("tf.aws_instance", "web", "diagrams.aws.compute.EC2"),
+        ("tf.aws_ami", "linux", "diagrams.aws.compute.EC2Ami"),
+        ("tf.aws_vpc", "main", "diagrams.aws.network.VPC"),
+        ("tf.aws_subnet", "app", "diagrams.generic.network.Subnet"),
     ],
 )
 def test_structured_terraform_kinds_get_explicit_provider_aware_icons(kind, label, expected):
