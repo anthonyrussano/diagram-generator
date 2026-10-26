@@ -39,7 +39,7 @@ For authored specs, validate the full set before rendering:
 
 Use one or more:
 - `aws` for live AWS inventory
-- `terraform` for `.tfstate` and `.tf.json`
+- `terraform` for `.tf`, `.tfstate`, `.tf.json`, and module directories
 - `json` for existing graph-like JSON
 - `kubernetes` for manifests and optionally live cluster
 - `helm` charts via `--helm-chart` (rendered through `helm template`)
@@ -101,6 +101,9 @@ Always report:
 - Summary of sources, counts, and notable gaps
 
 ## 7. Common Gaps to Report
+
+For HCL, richer manifest relationships, editable draw.io exports, and trusted
+Python authoring, follow [docs/AUTHORING_AND_EXPORT.md](docs/AUTHORING_AND_EXPORT.md).
 
 - Insufficient IAM permissions for some AWS APIs
 - Kubernetes context not configured

@@ -11,17 +11,21 @@ def collect_blind_spots(
     empty_sources: list[str] | None = None,
     unqueryable_resources: list[str] | None = None,
     permission_denials: list[str] | None = None,
+    warnings: list[str] | None = None,
 ) -> dict[str, Any]:
     """Build a structured blind spots report."""
-    return {
+    report = {
         "errors": errors or [],
         "empty_sources": empty_sources or [],
         "unqueryable_resources": unqueryable_resources or [],
         "permission_denials": permission_denials or [],
         "has_blind_spots": bool(
-            errors or empty_sources or unqueryable_resources or permission_denials
+            errors or empty_sources or unqueryable_resources or permission_denials or warnings
         ),
     }
+    if warnings:
+        report["warnings"] = warnings
+    return report
 
 
 def write_blind_spots_json(report: dict[str, Any], path: Path) -> Path:
@@ -39,6 +43,8 @@ def write_blind_spots_md(report: dict[str, Any], path: Path) -> Path:
         ("unqueryable_resources", "Unqueryable Resources"),
         ("permission_denials", "Permission Denials"),
     ]
+    if report.get("warnings"):
+        sections.append(("warnings", "Collection Warnings"))
 
     lines = ["# Blind Spots Report", ""]
     for key, title in sections:

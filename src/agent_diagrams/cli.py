@@ -41,7 +41,7 @@ from .spec_workflows import (
     write_compare_summary,
 )
 
-COMPOSITE_COMMANDS = {"spec", "spec-batch", "compare", "k8s", "aws-boto3", "icons"}
+COMPOSITE_COMMANDS = {"spec", "spec-batch", "compare", "k8s", "aws-boto3", "icons", "python"}
 
 
 def _merge_graphs(graphs: list[GraphData]) -> GraphData:
@@ -84,16 +84,16 @@ def build_parser() -> argparse.ArgumentParser:
             "Composite workflows are also available: diagram-gen spec --help, "
             "diagram-gen spec-batch --help, "
             "diagram-gen compare --help, diagram-gen k8s --help, diagram-gen aws-boto3 --help, "
-            "diagram-gen icons --help"
+            "diagram-gen icons --help, diagram-gen python --help"
         ),
     )
     parser.add_argument("--source", action="append", choices=["aws", "terraform", "json", "kubernetes"], help="Explicit sources to scan")
-    parser.add_argument("--discover", action="store_true", help="Auto-discover local json/tfstate/tf.json/k8s manifest files")
+    parser.add_argument("--discover", action="store_true", help="Auto-discover local json/tf/tfstate/tf.json/k8s manifest files")
     parser.add_argument("--root", default=".", help="Root folder for discovery")
     parser.add_argument("--profile", default="default", help="AWS profile")
     parser.add_argument("--region", default="us-east-1", help="AWS region")
     parser.add_argument("--json", nargs="*", default=[], help="Explicit JSON files")
-    parser.add_argument("--terraform", nargs="*", default=[], help="Explicit Terraform files (.tfstate, .tf.json)")
+    parser.add_argument("--terraform", nargs="*", default=[], help="Terraform files (.tf, .tfstate, .tf.json) or module directories")
     parser.add_argument("--k8s", nargs="*", default=[], help="Explicit Kubernetes manifest files")
     parser.add_argument("--helm-chart", nargs="*", default=[], help="Helm chart directories to render with 'helm template'")
     parser.add_argument("--helm-values", nargs="*", default=[], help="Optional Helm values files")
@@ -123,7 +123,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--diagram-format",
         action="append",
-        choices=["png", "svg", "pdf"],
+        choices=["png", "svg", "pdf", "drawio"],
         help="Optional non-Mermaid output format rendered with python-diagrams (repeat for multiple outputs)",
     )
     parser.add_argument("--diagram-title", default="Infrastructure Diagram", help="Title for non-Mermaid rendered diagram")
@@ -141,6 +141,14 @@ def build_composite_parser() -> argparse.ArgumentParser:
     )
     commands = parser.add_subparsers(dest="command", required=True)
 
+    python_parser = commands.add_parser("python", help="Render a trusted Python script using the Diagrams DSL")
+    python_parser.add_argument("--script", required=True, help="Trusted .py script; executes with your user/container permissions")
+    python_parser.add_argument("--out-dir", default="output", help="Output directory")
+    python_parser.add_argument("--output", "-o", default="architecture", help="Output prefix (multiple diagrams get -2, -3 suffixes)")
+    python_parser.add_argument("--format", action="append", choices=["png", "svg", "pdf", "dot", "drawio"], help="Output format; repeat as needed (default: png)")
+    python_parser.add_argument("--timeout", type=int, default=90, help="Script and rendering time limit in seconds (default: 90)")
+    python_parser.set_defaults(func=run_python_mode)
+
     icons_parser = commands.add_parser("icons", help="List available non-Mermaid node icons")
     icons_parser.add_argument("--search", help="Filter canonical icon names")
     icons_parser.add_argument("--provider", help="Filter by provider (for example: programming, saas, aws)")
@@ -155,7 +163,7 @@ def build_composite_parser() -> argparse.ArgumentParser:
     spec_parser.add_argument(
         "--format",
         action="append",
-        choices=["png", "pdf", "svg"],
+        choices=["png", "pdf", "svg", "drawio"],
         help="Output format; repeat for multiple formats (default: png)",
     )
     spec_parser.add_argument("--direction", choices=["TB", "LR", "BT", "RL"], help="Override diagram direction")
@@ -175,7 +183,7 @@ def build_composite_parser() -> argparse.ArgumentParser:
     batch_parser.add_argument(
         "--format",
         action="append",
-        choices=["png", "pdf", "svg"],
+        choices=["png", "pdf", "svg", "drawio"],
         help="Output format; repeat for multiple formats (default: png)",
     )
     batch_parser.add_argument("--direction", choices=["TB", "LR", "BT", "RL"], help="Override diagram direction")
@@ -188,7 +196,7 @@ def build_composite_parser() -> argparse.ArgumentParser:
     compare_parser.add_argument("--future", help="Future-state spec file")
     compare_parser.add_argument("--out-dir", default="output", help="Output directory for relative artifact paths")
     compare_parser.add_argument("--output-prefix", "-o", default="architecture_compare", help="Output prefix")
-    compare_parser.add_argument("--format", default="png", choices=["png", "pdf", "svg"], help="Output format")
+    compare_parser.add_argument("--format", default="png", choices=["png", "pdf", "svg", "drawio"], help="Output format")
     compare_parser.add_argument("--direction", choices=["TB", "LR", "BT", "RL"], help="Override diagram direction")
     compare_parser.set_defaults(func=run_compare_mode)
 
@@ -198,7 +206,7 @@ def build_composite_parser() -> argparse.ArgumentParser:
     aws_parser.add_argument("--tag", "-t", default="", help="Optional tag keyword filter")
     aws_parser.add_argument("--out-dir", default="output", help="Output directory for relative artifact paths")
     aws_parser.add_argument("--output", "-o", default="aws_architecture", help="Output file prefix")
-    aws_parser.add_argument("--format", default="png", choices=["png", "pdf", "svg"], help="Output format")
+    aws_parser.add_argument("--format", default="png", choices=["png", "pdf", "svg", "drawio"], help="Output format")
     aws_parser.add_argument("--direction", choices=["TB", "LR", "BT", "RL"], help="Diagram direction override")
     aws_parser.add_argument("--export-json", help="Optional path to save fetched AWS inventory JSON")
     aws_parser.set_defaults(func=run_aws_boto3_mode)
@@ -213,7 +221,7 @@ def build_composite_parser() -> argparse.ArgumentParser:
     discover_parser.add_argument("--direction", default="LR", choices=["TB", "LR", "BT", "RL"])
     discover_parser.add_argument("--out-dir", default="output", help="Output directory for relative artifact paths")
     discover_parser.add_argument("--output", "-o", default="k8s_namespace", help="Output file prefix")
-    discover_parser.add_argument("--format", default="png", choices=["png", "pdf", "svg"])
+    discover_parser.add_argument("--format", default="png", choices=["png", "pdf", "svg", "drawio"])
     discover_parser.add_argument("--export-spec", help="Also save the generated spec to this path")
     discover_parser.set_defaults(func=run_k8s_discover_mode)
 
@@ -224,7 +232,7 @@ def build_composite_parser() -> argparse.ArgumentParser:
     annotate_parser.add_argument("--context", help="kubectl context (defaults to current context)")
     annotate_parser.add_argument("--out-dir", default="output", help="Output directory for relative artifact paths")
     annotate_parser.add_argument("--output", "-o", default="annotated", help="Output file prefix")
-    annotate_parser.add_argument("--format", default="png", choices=["png", "pdf", "svg"])
+    annotate_parser.add_argument("--format", default="png", choices=["png", "pdf", "svg", "drawio"])
     annotate_parser.add_argument("--direction", choices=["TB", "LR", "BT", "RL"], help="Override diagram direction")
     annotate_parser.add_argument("--export-spec", help="Also save the annotated spec to this path")
     annotate_parser.set_defaults(func=run_k8s_annotate_mode)
@@ -272,6 +280,18 @@ def run_spec_mode(args: argparse.Namespace) -> None:
             direction=args.direction,
         )
         print(f"Diagram generated: {output}")
+
+
+def run_python_mode(args: argparse.Namespace) -> None:
+    from .python_authoring import render_python_script
+
+    result = render_python_script(Path(args.script), _resolve_output_prefix(args.output, args.out_dir), formats=_requested_formats(args), timeout=args.timeout)
+    if result.get("stdout"):
+        print(result["stdout"], end="" if result["stdout"].endswith("\n") else "\n")
+    for diagram in result["diagrams"]:
+        print(f"{diagram['name']}: Nodes: {diagram['nodes']} | Edges: {diagram['edges']}")
+        for path in diagram["paths"]:
+            print(f"Diagram generated: {path}")
 
 
 def _find_spec_files(root: Path, patterns: list[str], recursive: bool) -> list[Path]:
@@ -451,9 +471,14 @@ def run_aws_boto3_mode(args: argparse.Namespace) -> None:
         filtered_resources=filtered,
         output_file=str(output_prefix),
         keyword=args.tag,
-        output_format=args.format,
+        output_format="dot" if args.format == "drawio" else args.format,
         direction_override=args.direction,
     )
+    if args.format == "drawio":
+        from .renderers.drawio import export_dot_to_drawio
+
+        exported = export_dot_to_drawio(Path(f"{output_prefix}.dot"), Path(f"{output_prefix}.drawio"))
+        print(f"Wrote {exported}")
 
     # Also produce standard GraphData artifacts (JSON + Mermaid)
     graph = dedupe_graph(aws.boto3_to_graph_data(filtered, args.profile, args.region))
@@ -539,12 +564,12 @@ def main() -> None:
     if args.helm_chart:
         sources.add("kubernetes")
 
-    discovered = {"json": [], "tfstate": [], "tfjson": [], "k8s": []}
+    discovered = {"json": [], "tf": [], "tfstate": [], "tfjson": [], "k8s": []}
     if args.discover:
         discovered = discover_files(root)
         if discovered["json"]:
             sources.add("json")
-        if discovered["tfstate"] or discovered["tfjson"]:
+        if discovered["tf"] or discovered["tfstate"] or discovered["tfjson"]:
             sources.add("terraform")
         if discovered["k8s"]:
             sources.add("kubernetes")
@@ -577,7 +602,7 @@ def main() -> None:
                 blind_spot_errors.append(f"json: {exc}")
 
     if "terraform" in sources:
-        tf_files = [Path(path).resolve() for path in args.terraform] or (discovered["tfstate"] + discovered["tfjson"])
+        tf_files = [Path(path).resolve() for path in args.terraform] or (discovered["tf"] + discovered["tfstate"] + discovered["tfjson"])
         if tf_files:
             try:
                 g = collect_from_terraform(tf_files)
@@ -685,11 +710,8 @@ def main() -> None:
                     f"- {unresolved['id']}: kind={unresolved['kind']!r}, "
                     f"label={unresolved['label']!r}"
                 )
-    if args.zip_artifacts:
-        archive = shutil.make_archive(str(out_dir / args.name), "zip", root_dir=artifact_dir)
-        print(f"Wrote {archive}")
-
-    bs_report = collect_blind_spots(errors=blind_spot_errors, empty_sources=blind_spot_empty)
+    warnings = [f"{g.metadata.get('source', 'unknown')}: {warning}" for g in graphs for warning in g.metadata.get("warnings", [])]
+    bs_report = collect_blind_spots(errors=blind_spot_errors, empty_sources=blind_spot_empty, warnings=warnings)
     if bs_report["has_blind_spots"]:
         bs_json = artifact_dir / f"{args.name}.blindspots.json"
         bs_md = artifact_dir / f"{args.name}.blindspots.md"
@@ -697,6 +719,10 @@ def main() -> None:
         write_blind_spots_md(bs_report, bs_md)
         print(f"Wrote {bs_json}")
         print(f"Wrote {bs_md}")
+
+    if args.zip_artifacts:
+        archive = shutil.make_archive(str(out_dir / args.name), "zip", root_dir=artifact_dir)
+        print(f"Wrote {archive}")
 
     print(f"Nodes: {len(merged.nodes)} | Edges: {len(merged.edges)}")
 

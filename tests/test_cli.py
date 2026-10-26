@@ -161,7 +161,7 @@ def test_composite_parser_k8s_summarize():
 
 
 def test_composite_commands_coverage():
-    assert COMPOSITE_COMMANDS == {"spec", "spec-batch", "compare", "k8s", "aws-boto3", "icons"}
+    assert COMPOSITE_COMMANDS == {"spec", "spec-batch", "compare", "k8s", "aws-boto3", "icons", "python"}
 
 
 def test_run_spec_check_prints_counts_without_rendering(tmp_path, monkeypatch, capsys):

@@ -8,6 +8,8 @@ from typing import Any
 import yaml
 
 from .model import Edge, GraphData, Node
+from .terraform import collect_terraform
+from .kubernetes import collect_kubernetes_objects
 
 
 def _run_json(cmd: list[str]) -> Any:
@@ -149,29 +151,7 @@ def collect_from_json(paths: list[Path]) -> GraphData:
 
 
 def collect_from_terraform(paths: list[Path]) -> GraphData:
-    graph = GraphData(metadata={"source": "terraform", "inputs": _metadata_paths(paths)})
-    for path in paths:
-        raw = json.loads(path.read_text())
-
-        if "resources" in raw:  # state file shape
-            for r in raw.get("resources", []):
-                rtype = r.get("type", "resource")
-                name = r.get("name", "unnamed")
-                rid = f"tf:{rtype}.{name}"
-                graph.add_node(Node(id=rid, label=f"{rtype}.{name}", kind=f"tf.{rtype}", source="terraform", attrs=r))
-            continue
-
-        if "resource" in raw:  # tf.json config shape
-            for rtype, entries in raw.get("resource", {}).items():
-                for name, attrs in entries.items():
-                    rid = f"tf:{rtype}.{name}"
-                    graph.add_node(Node(id=rid, label=f"{rtype}.{name}", kind=f"tf.{rtype}", source="terraform", attrs=attrs))
-
-                    # basic ref extraction for explicit "depends_on"
-                    for dep in attrs.get("depends_on", []):
-                        graph.add_edge(Edge(src=rid, dst=f"tf:{dep}", rel="depends_on", source="terraform"))
-
-    return graph
+    return collect_terraform(paths, _metadata_paths(paths))
 
 
 def collect_from_helm_charts(
@@ -199,20 +179,22 @@ def collect_from_kubernetes(
     use_live_cluster: bool,
     extra_docs: list[dict[str, Any]] | None = None,
 ) -> GraphData:
-    graph = GraphData(
-        metadata={
-            "source": "kubernetes",
-            "inputs": _metadata_paths(manifest_paths),
-            "live": use_live_cluster,
-        }
-    )
+    metadata = {
+        "source": "kubernetes",
+        "inputs": _metadata_paths(manifest_paths),
+        "live": use_live_cluster,
+    }
 
     docs: list[dict[str, Any]] = []
-    for path in manifest_paths:
-        with path.open("r") as fh:
-            for d in yaml.safe_load_all(fh):
-                if isinstance(d, dict):
-                    docs.append(d)
+    warnings: list[str] = []
+    for path in sorted(manifest_paths):
+        try:
+            with path.open("r") as fh:
+                for d in yaml.safe_load_all(fh):
+                    if isinstance(d, dict):
+                        docs.append(d)
+        except (OSError, yaml.YAMLError) as exc:
+            warnings.append(f"{path.name}: unable to parse Kubernetes YAML: {exc}")
 
     if extra_docs:
         docs.extend(extra_docs)
@@ -221,41 +203,14 @@ def collect_from_kubernetes(
         live = _run_json(["kubectl", "get", "all", "--all-namespaces", "-o", "json"])
         docs.extend(live.get("items", []))
 
-    for obj in docs:
-        kind = obj.get("kind", "Unknown")
-        meta = obj.get("metadata", {})
-        ns = meta.get("namespace", "default")
-        name = meta.get("name", "unnamed")
-        node_id = f"k8s:{ns}:{kind}:{name}"
-
-        graph.add_node(
-            Node(
-                id=node_id,
-                label=f"{kind}/{name}",
-                kind=f"k8s.{str(kind).lower()}",
-                source="kubernetes",
-                attrs=obj,
-            )
-        )
-
-        owner_refs = meta.get("ownerReferences", []) or []
-        for owner in owner_refs:
-            ok = owner.get("kind", "Unknown")
-            oname = owner.get("name", "unnamed")
-            graph.add_edge(
-                Edge(
-                    src=node_id,
-                    dst=f"k8s:{ns}:{ok}:{oname}",
-                    rel="owned_by",
-                    source="kubernetes",
-                )
-            )
-
+    graph = collect_kubernetes_objects(docs, metadata)
+    graph.metadata["warnings"] = sorted(set(graph.metadata["warnings"] + warnings))
     return graph
 
 
 def discover_files(root: Path) -> dict[str, list[Path]]:
     return {
+        "tf": sorted([p for p in root.rglob("*.tf") if p.is_file() and ".terraform" not in p.parts]),
         "json": sorted([p for p in root.rglob("*.json") if p.is_file()]),
         "tfstate": sorted([p for p in root.rglob("*.tfstate") if p.is_file()]),
         "tfjson": sorted([p for p in root.rglob("*.tf.json") if p.is_file()]),

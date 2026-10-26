@@ -83,6 +83,11 @@ ICON_ALIASES: dict[str, str] = {
     "tf.aws_security_group": "diagrams.generic.network.Firewall",
     "tf.aws_iam_role": "diagrams.aws.security.IAMRole",
     "tf.aws_iam_policy": "diagrams.aws.security.IAMPermissions",
+    "tf.aws_instance": "diagrams.aws.compute.EC2",
+    "tf.aws_ami": "diagrams.aws.compute.EC2Ami",
+    "tf.aws_vpc": "diagrams.aws.network.VPC",
+    # A subnet declaration does not establish public/private routing.
+    "tf.aws_subnet": "diagrams.generic.network.Subnet",
     "k8s.deploy": "diagrams.k8s.compute.Deployment",
     "k8s.deployment": "diagrams.k8s.compute.Deployment",
     "k8s.pod": "diagrams.k8s.compute.Pod",
