@@ -30,6 +30,7 @@ from .renderers.images import (
     extract_mermaid_block,
     render_mermaid_image,
 )
+from .renderers.ferroprint import render_ferroprint
 from .renderers.json_renderer import render_json
 from .renderers.mermaid import render_mermaid
 from .blind_spots import collect_blind_spots, write_blind_spots_json, write_blind_spots_md
@@ -131,6 +132,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--diagram-title", default="Infrastructure Diagram", help="Title for non-Mermaid rendered diagram")
     parser.add_argument("--artifact-folder", action="store_true", help="Write outputs into out-dir/<name>/")
     parser.add_argument("--zip-artifacts", action="store_true", help="Zip all outputs into out-dir/<name>.zip")
+    parser.add_argument("--ferroprint", action="store_true", help="Export an editable Ferroprint JSON sheet alongside the graph")
     parser.add_argument(
         "--review-bundle",
         action="store_true",
@@ -295,6 +297,7 @@ def _apply_review_bundle(args: argparse.Namespace) -> None:
     args.diagram_format = list(dict.fromkeys([*(args.diagram_format or []), "svg", "png", "drawio"]))
     args.artifact_folder = True
     args.zip_artifacts = True
+    args.ferroprint = True
 
 
 def run_mermaid_mode(args: argparse.Namespace) -> None:
@@ -729,6 +732,17 @@ def main() -> None:
 
     render_json(merged, json_path)
     render_mermaid(merged, mermaid_path, direction=args.direction)
+    ferroprint_path = None
+    if args.ferroprint:
+        try:
+            ferroprint_path = render_ferroprint(
+                merged,
+                artifact_dir / f"{args.name}.ferroprint.json",
+                name=args.name,
+                direction=args.direction,
+            )
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
 
     rendered_images: list[Path] = []
     rendered_diagrams: list[Path] = []
@@ -774,6 +788,8 @@ def main() -> None:
 
     print(f"Wrote {json_path}")
     print(f"Wrote {mermaid_path}")
+    if ferroprint_path is not None:
+        print(f"Wrote {ferroprint_path}")
     for image_path in rendered_images:
         print(f"Wrote {image_path}")
     for diagram_path in rendered_diagrams:
