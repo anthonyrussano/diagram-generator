@@ -8,3 +8,6 @@ output
 *.zip
 .coverage
 htmlcov
+**/node_modules
+**/.tools
+**/.icon-cache
