@@ -315,12 +315,12 @@ def run_mermaid_mode(args: argparse.Namespace) -> None:
     formats = list(dict.fromkeys(args.format or ["svg", "png"]))
     with TemporaryDirectory(prefix=".diagram-gen-", dir=output_prefix.parent) as staging_dir:
         stage_prefix = Path(staging_dir) / output_prefix.name
-        source_path = stage_prefix.with_suffix(".mmd")
+        source_path = Path(f"{stage_prefix}.mmd")
         source_path.write_text(mermaid_source.rstrip() + "\n", encoding="utf-8")
 
         rendered = []
         for fmt in formats:
-            image_path = stage_prefix.with_suffix(f".{fmt}")
+            image_path = Path(f"{stage_prefix}.{fmt}")
             render_mermaid_image(
                 source_path,
                 image_path,
@@ -335,7 +335,7 @@ def run_mermaid_mode(args: argparse.Namespace) -> None:
             rendered.append(image_path)
 
         for staged in [source_path, *rendered]:
-            destination = output_prefix.with_suffix(staged.suffix)
+            destination = Path(f"{output_prefix}{staged.suffix}")
             staged.replace(destination)
             print(f"Wrote {destination}")
 
