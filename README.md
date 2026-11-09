@@ -70,7 +70,7 @@ change the original graph or Mermaid.
 
 For a small flow or sequence diagram that starts as Mermaid rather than
 infrastructure inventory, render directly from `.mmd` or a Markdown file
-containing a ```mermaid fence:
+containing a fenced `mermaid` code block:
 
 ```bash
 ./scripts/run-container.sh mermaid --input docs/flow.mmd \
