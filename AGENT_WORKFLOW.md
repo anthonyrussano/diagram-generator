@@ -35,6 +35,33 @@ For authored specs, validate the full set before rendering:
 ./scripts/run-container.sh spec-batch --spec-dir <spec-dir> --check
 ```
 
+### Review-ready output presets
+
+Use the bundled review preset when publishing an infrastructure diagram into a
+wiki, a PR, or an agent session recap:
+
+```bash
+./scripts/run-container.sh --source json --json <input.graph.json> \
+  --out-dir output --name review --review-bundle
+```
+
+The preset requests Graphviz SVG/PNG previews and an editable draw.io scene,
+with the original graph JSON, Mermaid source, and a ZIP. Inspect the previews
+before delivering, and check the graph/blind-spot JSON before sharing the ZIP.
+The Mermaid source is an alternative representation, not a layout-exact copy
+of the Graphviz visuals.
+
+For a purely conceptual Mermaid diagram, avoid running inventory collectors:
+
+```bash
+./scripts/run-container.sh mermaid --input examples/mermaid-flow.mmd \
+  --out-dir output --output concept
+```
+
+This produces an `.mmd` source and SVG/PNG previews. It does not generate graph
+JSON, draw.io, or Excalidraw. Invalid Mermaid must be repaired before delivery.
+See [the gstack workflow comparison](docs/GSTACK_DIAGRAM_COMPARISON.md).
+
 ## 3. Choose Data Sources
 
 Use one or more:
@@ -94,11 +121,14 @@ For multiple authored specs, use `spec-batch` with repeated `--format` flags. Re
 ## 6. Produce Final Artifacts
 
 Always report:
-- Mermaid source path
-- Graph JSON path
-- Image path(s) when requested
-- Zip path when requested
-- Summary of sources, counts, and notable gaps
+- Canonical source path (Mermaid `.mmd`, a graph `.graph.json`, or a YAML/JSON spec)
+- Rendered SVG/PNG paths, after visually checking legibility
+- Native editable `.drawio` path, if generated
+- ZIP path when requested, after reviewing included metadata
+- Summary of sources, node/edge counts where available, and notable gaps
+
+For `diagram-gen mermaid`, report the `.mmd` and images; that mode has no
+graph JSON or native editable scene.
 
 ## 7. Common Gaps to Report
 
