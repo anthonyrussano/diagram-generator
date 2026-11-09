@@ -24,7 +24,7 @@ Read `AGENTS.md`, `AGENT_WORKFLOW.md`, and relevant `docs/` guides before execut
 
 **Infrastructure source / graph input — default choice.** Use the review bundle,
 which produces graph JSON, Mermaid, Graphviz SVG/PNG previews, a native editable
-draw.io scene, and a ZIP in one output folder:
+draw.io scene, a Ferroprint project JSON, and a ZIP in one output folder:
 
 ```bash
 ./scripts/build-container.sh
@@ -34,7 +34,7 @@ draw.io scene, and a ZIP in one output folder:
 
 Change the source flags for scoped Terraform/Kubernetes/AWS inputs. Scope discovery
 outside the output directory. The SVG/PNG are Graphviz previews of the same graph
-as the draw.io export; the `.mmd` is an alternative Mermaid representation.
+as the draw.io export; the `.mmd` is an alternative Mermaid representation.\nThe `.ferroprint.json` is a separate editable browser-document format, not a\nGraphviz-layout-exact copy.
 
 **YAML/JSON authoring** (preferred for diagrams created during a session):
 
@@ -58,6 +58,13 @@ This stages and verifies SVG and PNG before publishing a normalized `.mmd`.
 Markdown input with a fenced Mermaid block also works. The Mermaid path does
 **not** create a draw.io or Excalidraw scene: do not claim otherwise.
 
+**Model-checked state machines** (provisioning, retries, protocols, failover):
+`diagram-gen statechart --spec MODEL.tla --config MODEL.cfg --view view.mjs
+--out output/model --render svg`. Read the isolated setup guide under
+`integrations/statechart/` first. Exit code 1 means a *rule was violated*;
+preserve its counterexample report. Do not weaken a model rule to get exit 0.
+Label counterexamples **model only** until they are reproduced in the real system.
+
 ## 3. Validate before sharing
 
 1. Run the repository container checks: `./scripts/check-container.sh`.
@@ -70,7 +77,7 @@ Markdown input with a fenced Mermaid block also works. The Mermaid path does
 5. Check ZIP contents before attaching or publishing. Raw graph JSON and source
    metadata can disclose configuration, identifiers, or infrastructure details.
 6. Publish the source/spec, image previews, and editable output together. Give
-   precise paths and distinguish editable draw.io cells from generated images.
+   precise paths and distinguish editable draw.io/Ferroprint documents from generated images.
 
 ## 4. Editing and provenance
 
