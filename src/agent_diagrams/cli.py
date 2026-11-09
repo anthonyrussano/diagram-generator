@@ -137,7 +137,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--review-bundle",
         action="store_true",
-        help="Render a review-ready bundle: graph JSON, Mermaid source, Graphviz SVG/PNG, editable draw.io, and ZIP",
+        help="Render a review-ready bundle: graph JSON, Mermaid source, Graphviz SVG/PNG, editable draw.io/Ferroprint, and ZIP",
     )
     return parser
 
