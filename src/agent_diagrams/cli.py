@@ -44,7 +44,7 @@ from .spec_workflows import (
     write_compare_summary,
 )
 
-COMPOSITE_COMMANDS = {"spec", "spec-batch", "compare", "k8s", "aws-boto3", "icons", "python", "mermaid"}
+COMPOSITE_COMMANDS = {"spec", "spec-batch", "compare", "k8s", "aws-boto3", "icons", "python", "mermaid", "statechart"}
 
 
 def _merge_graphs(graphs: list[GraphData]) -> GraphData:
@@ -87,7 +87,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Composite workflows are also available: diagram-gen spec --help, "
             "diagram-gen spec-batch --help, "
             "diagram-gen compare --help, diagram-gen k8s --help, diagram-gen aws-boto3 --help, "
-            "diagram-gen icons --help, diagram-gen python --help, diagram-gen mermaid --help"
+            "diagram-gen icons --help, diagram-gen python --help, "
+            "diagram-gen mermaid --help, diagram-gen statechart --help"
         ),
     )
     parser.add_argument("--source", action="append", choices=["aws", "terraform", "json", "kubernetes"], help="Explicit sources to scan")
@@ -166,6 +167,19 @@ def build_composite_parser() -> argparse.ArgumentParser:
     mermaid_parser.add_argument("--mermaid-theme", default=None)
     mermaid_parser.add_argument("--mermaid-background", default="transparent")
     mermaid_parser.set_defaults(func=run_mermaid_mode)
+
+    statechart_parser = commands.add_parser(
+        "statechart", help="TLA+/TLC model-check a state machine and generate a Mermaid statechart"
+    )
+    statechart_parser.add_argument("--spec", required=True, help="TLA+ .tla specification")
+    statechart_parser.add_argument("--config", help="TLC .cfg file (defaults beside spec)")
+    statechart_parser.add_argument("--view", help="Optional JS view module defining states and transitions")
+    statechart_parser.add_argument("--out", help="New or empty output directory")
+    statechart_parser.add_argument(
+        "--render", choices=["svg", "png"],
+        help="Render a generated chart as themed SVG, or SVG+PNG using Pele",
+    )
+    statechart_parser.set_defaults(func=run_statechart_mode)
 
     python_parser = commands.add_parser("python", help="Render a trusted Python script using the Diagrams DSL")
     python_parser.add_argument("--script", required=True, help="Trusted .py script; executes with your user/container permissions")
@@ -298,6 +312,49 @@ def _apply_review_bundle(args: argparse.Namespace) -> None:
     args.artifact_folder = True
     args.zip_artifacts = True
     args.ferroprint = True
+
+
+def run_statechart_mode(args: argparse.Namespace) -> int:
+    """Run the isolated TLA+/TLC workflow, preserving model-check verdict codes.
+
+    Return 0 when rules hold, 1 when TLC finds violations, and 2 for a
+    model-checking or rendering error. The upstream wrapper owns model
+    verification, report generation and CSS-based error-path highlighting.
+    """
+    integration = Path(__file__).resolve().parents[2] / "integrations" / "statechart"
+    checker = integration / "scripts" / "statechart"
+    if not checker.is_file():
+        raise FileNotFoundError(f"Statechart runtime missing: {checker}")
+    spec = Path(args.spec).resolve()
+    if not spec.is_file():
+        raise FileNotFoundError(f"TLA+ specification missing: {spec}")
+    out = Path(args.out).resolve() if args.out else spec.with_name(f"{spec.stem}-chart")
+    cmd = ["bash", str(checker), str(spec)]
+    if args.config:
+        cmd.extend(["--config", str(Path(args.config).resolve())])
+    if args.view:
+        cmd.extend(["--view", str(Path(args.view).resolve())])
+    cmd.extend(["--out", str(out)])
+
+    code = subprocess.run(cmd, check=False).returncode
+    if code not in (0, 1):
+        return code if code > 1 else 2
+
+    if args.render:
+        chart = out / "chart.mmd"
+        if chart.is_file():
+            render_cmd = ["bash", str(integration / "scripts" / "render")]
+            if args.render == "png":
+                render_cmd.append("--png")
+            render_cmd.append(str(chart))
+            if subprocess.run(render_cmd, check=False).returncode != 0:
+                return 2
+        else:
+            print(f"No chart.mmd generated at {out}; see report.md for state budget or other limits.")
+
+    print(f"TLC verdict exit code: {code} (0=all checked rules hold, 1=rule violation)")
+    print(f"Statechart report: {out / 'report.md'}")
+    return code
 
 
 def run_mermaid_mode(args: argparse.Namespace) -> None:
@@ -630,7 +687,9 @@ def main() -> None:
     if argv and argv[0] in COMPOSITE_COMMANDS:
         composite_args = build_composite_parser().parse_args(argv)
         try:
-            composite_args.func(composite_args)
+            status = composite_args.func(composite_args)
+            if composite_args.command == "statechart":
+                raise SystemExit(status)
         except (RuntimeError, ValueError, FileNotFoundError, subprocess.CalledProcessError) as exc:
             raise SystemExit(str(exc)) from exc
         return
