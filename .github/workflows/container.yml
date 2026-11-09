@@ -89,7 +89,7 @@ jobs:
             test -s /tmp/output/review-smoke/review-smoke.diagram.drawio &&
             test -s /tmp/output/review-smoke.zip &&
             printf "flowchart LR\n  A --> B\n" > /tmp/flow.mmd &&
-            diagram-gen mermaid --input /tmp/flow.mmd \
+            diagram-gen mermaid --input /app/examples/mermaid-flow.mmd \
               --out-dir /tmp/output --output flow-smoke &&
             test -s /tmp/output/flow-smoke.mmd &&
             test -s /tmp/output/flow-smoke.svg &&
