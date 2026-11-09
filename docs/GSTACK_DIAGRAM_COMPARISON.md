@@ -100,7 +100,7 @@ and `output/example.zip`.
 For a user-authored Mermaid flow:
 
 ```bash
-./scripts/run-container.sh mermaid --input example.mmd \
+./scripts/run-container.sh mermaid --input examples/mermaid-flow.mmd \
   --out-dir output --output flow
 ```
 
