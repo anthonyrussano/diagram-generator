@@ -87,13 +87,20 @@ jobs:
             test -s /tmp/output/review-smoke/review-smoke.diagram.svg &&
             test -s /tmp/output/review-smoke/review-smoke.diagram.png &&
             test -s /tmp/output/review-smoke/review-smoke.diagram.drawio &&
+            test -s /tmp/output/review-smoke/review-smoke.ferroprint.json &&
             test -s /tmp/output/review-smoke.zip &&
             printf "flowchart LR\n  A --> B\n" > /tmp/flow.mmd &&
             diagram-gen mermaid --input /app/examples/mermaid-flow.mmd \
               --out-dir /tmp/output --output flow-smoke &&
             test -s /tmp/output/flow-smoke.mmd &&
             test -s /tmp/output/flow-smoke.svg &&
-            test -s /tmp/output/flow-smoke.png
+            test -s /tmp/output/flow-smoke.png &&
+            python -c 'import json; p=json.load(open("/tmp/output/review-smoke/review-smoke.ferroprint.json")); assert len(p["sheets"]) == 1 and len(p["sheets"][0]["nodes"]) > 0' &&
+            bash -n /app/integrations/statechart/scripts/bootstrap.sh &&
+            bash -n /app/integrations/statechart/scripts/check.sh &&
+            bash -n /app/integrations/statechart/scripts/render &&
+            bash -n /app/integrations/statechart/scripts/statechart &&
+            node --check /app/integrations/statechart/scripts/render.mjs
           '
 
   publish:
