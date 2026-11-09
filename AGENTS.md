@@ -61,6 +61,20 @@ inner loop, but they do not replace the required container verification.
 3. Add output formats useful for PR review and docs publication.
 4. Keep command interface stable; if changed, update docs in same PR.
 
+## Optional editors and model checking
+
+- `--ferroprint` exports native Ferroprint project JSON without running JS.
+  Treat the source graph as canonical, and never copy raw collector attributes
+  into portable editor documents.
+- `integrations/statechart/` contains a pinned MIT-licensed TLA+/TLC engine.
+  It is an optional isolated Node/Java/Pele runtime, not a dependency of the
+  default diagram container. For a statechart change, also run its
+  `scripts/check.sh` after bootstrap and preserve the original TLC verdict.
+- Do not change `integrations/statechart/vendor/` casually: track its
+  upstream commit and MIT license; run upstream regression tests for vendor
+  modifications. Never weaken a model invariant to force a pass.
+- See `docs/CONSOLIDATION_REVIEW.md` for Ferroprint and Excalidraw limits.
+
 ## Required Checks Before Finishing
 
 1. `./scripts/build-container.sh`
