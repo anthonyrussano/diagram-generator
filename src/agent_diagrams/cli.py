@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import yaml
 
@@ -26,6 +27,7 @@ from .renderers.images import (
     CONTAINER_ENGINES,
     DEFAULT_IMAGE,
     MERMAID_RUNTIMES,
+    extract_mermaid_block,
     render_mermaid_image,
 )
 from .renderers.json_renderer import render_json
@@ -41,7 +43,7 @@ from .spec_workflows import (
     write_compare_summary,
 )
 
-COMPOSITE_COMMANDS = {"spec", "spec-batch", "compare", "k8s", "aws-boto3", "icons", "python"}
+COMPOSITE_COMMANDS = {"spec", "spec-batch", "compare", "k8s", "aws-boto3", "icons", "python", "mermaid"}
 
 
 def _merge_graphs(graphs: list[GraphData]) -> GraphData:
@@ -84,7 +86,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Composite workflows are also available: diagram-gen spec --help, "
             "diagram-gen spec-batch --help, "
             "diagram-gen compare --help, diagram-gen k8s --help, diagram-gen aws-boto3 --help, "
-            "diagram-gen icons --help, diagram-gen python --help"
+            "diagram-gen icons --help, diagram-gen python --help, diagram-gen mermaid --help"
         ),
     )
     parser.add_argument("--source", action="append", choices=["aws", "terraform", "json", "kubernetes"], help="Explicit sources to scan")
@@ -129,6 +131,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--diagram-title", default="Infrastructure Diagram", help="Title for non-Mermaid rendered diagram")
     parser.add_argument("--artifact-folder", action="store_true", help="Write outputs into out-dir/<name>/")
     parser.add_argument("--zip-artifacts", action="store_true", help="Zip all outputs into out-dir/<name>.zip")
+    parser.add_argument(
+        "--review-bundle",
+        action="store_true",
+        help="Render a review-ready bundle: graph JSON, Mermaid source, Graphviz SVG/PNG, editable draw.io, and ZIP",
+    )
     return parser
 
 
@@ -140,6 +147,23 @@ def build_composite_parser() -> argparse.ArgumentParser:
         )
     )
     commands = parser.add_subparsers(dest="command", required=True)
+
+    mermaid_parser = commands.add_parser(
+        "mermaid", help="Render an existing Mermaid file or fenced Markdown block to SVG and PNG"
+    )
+    mermaid_parser.add_argument("--input", required=True, help="Mermaid .mmd or Markdown file containing a Mermaid fence")
+    mermaid_parser.add_argument("--out-dir", default="output", help="Output directory")
+    mermaid_parser.add_argument("--output", "-o", help="Output name (defaults to input file stem)")
+    mermaid_parser.add_argument(
+        "--format", action="append", choices=["svg", "png"],
+        help="Image format; repeat as needed (default: both SVG and PNG)",
+    )
+    mermaid_parser.add_argument("--mermaid-image", default=DEFAULT_IMAGE, help="Container image for mermaid-cli")
+    mermaid_parser.add_argument("--mermaid-runtime", default="auto", choices=MERMAID_RUNTIMES)
+    mermaid_parser.add_argument("--container-engine", default="auto", choices=CONTAINER_ENGINES)
+    mermaid_parser.add_argument("--mermaid-theme", default=None)
+    mermaid_parser.add_argument("--mermaid-background", default="transparent")
+    mermaid_parser.set_defaults(func=run_mermaid_mode)
 
     python_parser = commands.add_parser("python", help="Render a trusted Python script using the Diagrams DSL")
     python_parser.add_argument("--script", required=True, help="Trusted .py script; executes with your user/container permissions")
@@ -262,6 +286,58 @@ def _print_spec_counts(label: str, spec: dict) -> None:
         f"{label}: Nodes: {counts['nodes']} | Edges: {counts['edges']} | "
         f"Clusters: {counts['clusters']}"
     )
+
+
+def _apply_review_bundle(args: argparse.Namespace) -> None:
+    """Select matching Graphviz previews and an editable draw.io scene in one bundle."""
+    if not args.review_bundle:
+        return
+    args.diagram_format = list(dict.fromkeys([*(args.diagram_format or []), "svg", "png", "drawio"]))
+    args.artifact_folder = True
+    args.zip_artifacts = True
+
+
+def run_mermaid_mode(args: argparse.Namespace) -> None:
+    """Render user-authored Mermaid without invoking infrastructure collectors.
+
+    Stage the source and all requested images together. A failed render leaves no
+    newly published artifacts, and the source shares a directory with images for
+    both native and container-based Mermaid runtimes.
+    """
+    input_path = Path(args.input).resolve()
+    if not input_path.is_file():
+        raise FileNotFoundError(f"Mermaid input not found: {input_path}")
+    mermaid_source = extract_mermaid_block(input_path.read_text(encoding="utf-8"))
+    if not mermaid_source:
+        raise ValueError(f"Mermaid source is empty: {input_path}")
+
+    output_prefix = _resolve_output_prefix(args.output or input_path.stem, args.out_dir)
+    formats = list(dict.fromkeys(args.format or ["svg", "png"]))
+    with TemporaryDirectory(prefix=".diagram-gen-", dir=output_prefix.parent) as staging_dir:
+        stage_prefix = Path(staging_dir) / output_prefix.name
+        source_path = stage_prefix.with_suffix(".mmd")
+        source_path.write_text(mermaid_source.rstrip() + "\n", encoding="utf-8")
+
+        rendered = []
+        for fmt in formats:
+            image_path = stage_prefix.with_suffix(f".{fmt}")
+            render_mermaid_image(
+                source_path,
+                image_path,
+                image=args.mermaid_image,
+                background=args.mermaid_background,
+                theme=args.mermaid_theme,
+                runtime=args.mermaid_runtime,
+                container_engine=args.container_engine,
+            )
+            if not image_path.is_file() or image_path.stat().st_size == 0:
+                raise RuntimeError(f"Mermaid renderer did not produce a nonempty {fmt} image")
+            rendered.append(image_path)
+
+        for staged in [source_path, *rendered]:
+            destination = output_prefix.with_suffix(staged.suffix)
+            staged.replace(destination)
+            print(f"Wrote {destination}")
 
 
 def run_spec_mode(args: argparse.Namespace) -> None:
@@ -557,6 +633,7 @@ def main() -> None:
         return
 
     args = build_parser().parse_args(argv)
+    _apply_review_bundle(args)
     root = Path(args.root).resolve()
     out_dir = Path(args.out_dir).resolve()
 
