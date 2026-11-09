@@ -12,6 +12,7 @@ on:
       - "src/**"
       - "tests/**"
       - "examples/**"
+      - "integrations/**"
   push:
     branches: [main]
     tags: ["v*"]
@@ -89,7 +90,6 @@ jobs:
             test -s /tmp/output/review-smoke/review-smoke.diagram.drawio &&
             test -s /tmp/output/review-smoke/review-smoke.ferroprint.json &&
             test -s /tmp/output/review-smoke.zip &&
-            printf "flowchart LR\n  A --> B\n" > /tmp/flow.mmd &&
             diagram-gen mermaid --input /app/examples/mermaid-flow.mmd \
               --out-dir /tmp/output --output flow-smoke &&
             test -s /tmp/output/flow-smoke.mmd &&
