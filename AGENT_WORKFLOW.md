@@ -46,7 +46,7 @@ wiki, a PR, or an agent session recap:
 ```
 
 The preset requests Graphviz SVG/PNG previews and an editable draw.io scene,
-with the original graph JSON, Mermaid source, and a ZIP. Inspect the previews
+with the original graph JSON, Mermaid source, Ferroprint JSON, and a ZIP. Inspect the previews
 before delivering, and check the graph/blind-spot JSON before sharing the ZIP.
 The Mermaid source is an alternative representation, not a layout-exact copy
 of the Graphviz visuals.
@@ -61,6 +61,19 @@ For a purely conceptual Mermaid diagram, avoid running inventory collectors:
 This produces an `.mmd` source and SVG/PNG previews. It does not generate graph
 JSON, draw.io, or Excalidraw. Invalid Mermaid must be repaired before delivery.
 See [the gstack workflow comparison](docs/GSTACK_DIAGRAM_COMPARISON.md).
+
+### Checked state machines
+
+For protocols, provisioning and failover behavior, do not draw an unverified
+flowchart when the ask is about *which transitions violate a rule*. Use the
+optional TLA+/TLC checker under `integrations/statechart/`. Bootstrap its
+isolated Node/Java tools once, then use `diagram-gen statechart --help`
+and the worked example in [integrations/statechart/README.md](integrations/statechart/README.md).
+
+Exit 1 is a modeled violation and may include a useful counterexample; exit 2
+is a tool/model error. Distinguish model-only failures from reproduced failures
+in the live system. Do not weaken invariants to force success. The standalone
+Python toolchain's regular container policy does not bootstrap Java/TLC.
 
 ## 3. Choose Data Sources
 
