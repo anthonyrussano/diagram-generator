@@ -59,8 +59,7 @@ Markdown input with a fenced Mermaid block also works. The Mermaid path does
 **not** create a draw.io or Excalidraw scene: do not claim otherwise.
 
 **Model-checked state machines** (provisioning, retries, protocols, failover):
-`diagram-gen statechart --spec MODEL.tla --config MODEL.cfg --view view.mjs
---out output/model --render svg`. Read the isolated setup guide under
+\`diagram-gen statechart --spec MODEL.tla --config MODEL.cfg --view view.mjs --out output/model --render svg\`. Read the isolated setup guide under
 `integrations/statechart/` first. Exit code 1 means a *rule was violated*;
 preserve its counterexample report. Do not weaken a model rule to get exit 0.
 Label counterexamples **model only** until they are reproduced in the real system.
