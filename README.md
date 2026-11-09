@@ -73,7 +73,7 @@ infrastructure inventory, render directly from `.mmd` or a Markdown file
 containing a fenced `mermaid` code block:
 
 ```bash
-./scripts/run-container.sh mermaid --input docs/flow.mmd \
+./scripts/run-container.sh mermaid --input examples/mermaid-flow.mmd \
   --out-dir output --output flow
 # Produces flow.mmd, flow.svg, and flow.png (both images by default).
 ```
