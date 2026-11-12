@@ -26,6 +26,12 @@ esac
 "${container_engine}" run --rm --workdir /app --entrypoint uv \
     "${image_name}" run pytest tests/ -v
 
+# Exercise the non-editable installation without pytest's checkout pythonpath.
+"${container_engine}" run --rm --workdir /tmp --entrypoint python \
+    "${image_name}" -I -m pytest -c /dev/null --rootdir=/app \
+    --import-mode=importlib -p no:cacheprovider \
+    /app/tests/test_statechart_cli.py -v
+
 "${container_engine}" run --rm --workdir /app --entrypoint /bin/bash \
     "${image_name}" -lc \
     'uv run python -m py_compile src/agent_diagrams/*.py src/agent_diagrams/renderers/*.py'

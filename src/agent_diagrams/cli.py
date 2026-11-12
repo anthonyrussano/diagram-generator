@@ -314,6 +314,15 @@ def _apply_review_bundle(args: argparse.Namespace) -> None:
     args.ferroprint = True
 
 
+def _statechart_root() -> Path:
+    """Use wheel resources when installed, or the integration in a source checkout."""
+    package_dir = Path(__file__).resolve().parent
+    bundled = package_dir / "_statechart"
+    if bundled.is_dir():
+        return bundled
+    return package_dir.parents[1] / "integrations" / "statechart"
+
+
 def run_statechart_mode(args: argparse.Namespace) -> int:
     """Run the isolated TLA+/TLC workflow, preserving model-check verdict codes.
 
@@ -321,7 +330,7 @@ def run_statechart_mode(args: argparse.Namespace) -> int:
     model-checking or rendering error. The upstream wrapper owns model
     verification, report generation and CSS-based error-path highlighting.
     """
-    integration = Path(__file__).resolve().parents[2] / "integrations" / "statechart"
+    integration = _statechart_root()
     checker = integration / "scripts" / "statechart"
     if not checker.is_file():
         raise FileNotFoundError(f"Statechart runtime missing: {checker}")
@@ -690,7 +699,10 @@ def main() -> None:
             status = composite_args.func(composite_args)
             if composite_args.command == "statechart":
                 raise SystemExit(status)
-        except (RuntimeError, ValueError, FileNotFoundError, subprocess.CalledProcessError) as exc:
+        except (RuntimeError, ValueError, OSError, subprocess.CalledProcessError) as exc:
+            if composite_args.command == "statechart":
+                print(str(exc), file=sys.stderr)
+                raise SystemExit(2) from exc
             raise SystemExit(str(exc)) from exc
         return
 

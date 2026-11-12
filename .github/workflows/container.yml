@@ -13,6 +13,7 @@ on:
       - "tests/**"
       - "examples/**"
       - "integrations/**"
+      - "scripts/check-container.sh"
   push:
     branches: [main]
     tags: ["v*"]
@@ -52,6 +53,13 @@ jobs:
             uv run pytest tests/ -q &&
             uv run python -m py_compile src/agent_diagrams/*.py src/agent_diagrams/renderers/*.py
           '
+
+      - name: Verify installed statechart runtime
+        run: |
+          docker run --rm --workdir /tmp --entrypoint python diagram-gen:test \
+            -I -m pytest -c /dev/null --rootdir=/app \
+            --import-mode=importlib -p no:cacheprovider \
+            /app/tests/test_statechart_cli.py -v
 
       - name: Smoke all local renderers in image
         run: |
