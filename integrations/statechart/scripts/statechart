@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Run the vendored statechart command with the repo's pinned Java and TLC.
+# Usage: scripts/statechart SPEC.tla [--config FILE] [--view FILE] [--out DIR]
+set -euo pipefail
+
+repo_root=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+export TLA2TOOLS="${TLA2TOOLS:-${repo_root}/.tools/tla2tools.jar}"
+export JAVA="${JAVA:-${repo_root}/.tools/jre/bin/java}"
+
+if [[ ! -f "${TLA2TOOLS}" || ! -x "${JAVA}" ]]; then
+    echo "Java or TLC is missing. Run ${repo_root}/scripts/bootstrap.sh first." >&2
+    exit 2
+fi
+
+exec "${repo_root}/vendor/statechart/scripts/statechart" "$@"

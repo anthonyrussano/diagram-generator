@@ -1,0 +1,9 @@
+{
+  "name": "statechart-generator",
+  "private": true,
+  "type": "module",
+  "description": "Model-checked Mermaid statecharts for agents (TLA+ / TLC + Pele)",
+  "dependencies": {
+    "pele": "1.9.0"
+  }
+}

@@ -32,5 +32,21 @@ build-backend = "hatchling.build"
 testpaths = ["tests"]
 pythonpath = ["src"]
 
+[tool.hatch.build]
+exclude = ["**/node_modules", "**/.tools", "**/output", "**/*-chart", "**/.pytest_cache"]
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/agent_diagrams"]
+only-include = [
+  "src/agent_diagrams",
+  "integrations/statechart/scripts",
+  "integrations/statechart/vendor",
+  "integrations/statechart/examples",
+  "integrations/statechart/package.json",
+  "integrations/statechart/package-lock.json",
+  "integrations/statechart/README.md",
+]
+dev-mode-dirs = ["src"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src" = ""
+"integrations/statechart" = "agent_diagrams/_statechart"

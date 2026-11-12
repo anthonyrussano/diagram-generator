@@ -94,6 +94,7 @@ COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
 COPY tests ./tests
 COPY examples ./examples
+COPY integrations/statechart ./integrations/statechart
 COPY containers/puppeteer-config.json /etc/diagram-gen/puppeteer-config.json
 
 RUN uv sync \

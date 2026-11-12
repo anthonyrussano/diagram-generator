@@ -1,0 +1,5 @@
+flowchart LR
+  Source["Source change"] --> Check["CI checks"]
+  Check --> Build["Build image"]
+  Build --> Review["Review changes"]
+  Review --> Release["Release"]

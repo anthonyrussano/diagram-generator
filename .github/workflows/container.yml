@@ -12,6 +12,8 @@ on:
       - "src/**"
       - "tests/**"
       - "examples/**"
+      - "integrations/**"
+      - "scripts/check-container.sh"
   push:
     branches: [main]
     tags: ["v*"]
@@ -52,6 +54,13 @@ jobs:
             uv run python -m py_compile src/agent_diagrams/*.py src/agent_diagrams/renderers/*.py
           '
 
+      - name: Verify installed statechart runtime
+        run: |
+          docker run --rm --workdir /tmp --entrypoint python diagram-gen:test \
+            -I -m pytest -c /dev/null --rootdir=/app \
+            --import-mode=importlib -p no:cacheprovider \
+            /app/tests/test_statechart_cli.py -v
+
       - name: Smoke all local renderers in image
         run: |
           docker run --rm --entrypoint sh diagram-gen:test -c '
@@ -78,7 +87,28 @@ jobs:
               --format svg \
               --format png &&
             test -s /tmp/spec-output/spec-architecture.svg &&
-            test -s /tmp/spec-output/spec-architecture.png
+            test -s /tmp/spec-output/spec-architecture.png &&
+            diagram-gen --source json \
+              --json /app/tests/snapshots/simple_graph.graph.json \
+              --out-dir /tmp/output --name review-smoke --review-bundle &&
+            test -s /tmp/output/review-smoke/review-smoke.graph.json &&
+            test -s /tmp/output/review-smoke/review-smoke.mmd &&
+            test -s /tmp/output/review-smoke/review-smoke.diagram.svg &&
+            test -s /tmp/output/review-smoke/review-smoke.diagram.png &&
+            test -s /tmp/output/review-smoke/review-smoke.diagram.drawio &&
+            test -s /tmp/output/review-smoke/review-smoke.ferroprint.json &&
+            test -s /tmp/output/review-smoke.zip &&
+            diagram-gen mermaid --input /app/examples/mermaid-flow.mmd \
+              --out-dir /tmp/output --output flow-smoke &&
+            test -s /tmp/output/flow-smoke.mmd &&
+            test -s /tmp/output/flow-smoke.svg &&
+            test -s /tmp/output/flow-smoke.png &&
+            python -m json.tool /tmp/output/review-smoke/review-smoke.ferroprint.json >/dev/null &&
+            bash -n /app/integrations/statechart/scripts/bootstrap.sh &&
+            bash -n /app/integrations/statechart/scripts/check.sh &&
+            bash -n /app/integrations/statechart/scripts/render &&
+            bash -n /app/integrations/statechart/scripts/statechart &&
+            node --check /app/integrations/statechart/scripts/render.mjs
           '
 
   publish:

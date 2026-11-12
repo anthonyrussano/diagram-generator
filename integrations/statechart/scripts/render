@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Render Mermaid statecharts to SVG with Pele; --png also screenshots each SVG with
+# Chromium from the mermaid-cli image that ~/diagram-generator already uses.
+# Usage: scripts/render [--png] chart.mmd [more.mmd ...]
+set -euo pipefail
+
+repo_root=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+image=${MERMAID_CLI_IMAGE:-ghcr.io/mermaid-js/mermaid-cli/mermaid-cli:11.16.0}
+png=false
+if [[ "${1:-}" == "--png" ]]; then png=true; shift; fi
+[[ $# -gt 0 ]] || { echo "Usage: scripts/render [--png] chart.mmd [...]" >&2; exit 2; }
+
+node "${repo_root}/scripts/render.mjs" "$@"
+$png || exit 0
+
+engine=${CONTAINER_ENGINE:-$(command -v docker >/dev/null && echo docker || echo podman)}
+svgs=() mounts=(--volume "${repo_root}/scripts:${repo_root}/scripts:ro")
+declare -A seen=()
+for mmd in "$@"; do
+    svg=$(realpath "${mmd%.mmd}.svg")
+    svgs+=("${svg}")
+    dir=$(dirname "${svg}")
+    [[ -n "${seen[$dir]:-}" ]] || { mounts+=(--volume "${dir}:${dir}"); seen[$dir]=1; }
+done
+user_flags=(--user "$(id -u):$(id -g)")
+[[ "${engine}" == podman ]] && user_flags=(--userns=keep-id)
+"${engine}" run --rm "${user_flags[@]}" -e HOME=/tmp "${mounts[@]}" \
+    --entrypoint node "${image}" "${repo_root}/scripts/screenshot.cjs" "${svgs[@]}"

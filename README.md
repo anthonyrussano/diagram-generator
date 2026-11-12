@@ -25,6 +25,8 @@ Detailed setup docs:
 - Node icon catalog and resolution: [docs/ICONS.md](docs/ICONS.md)
 - Architecture spec validation, batch rendering, and layout controls: [docs/SPECS.md](docs/SPECS.md)
 - HCL, manifest relationships, Python authoring, and editable draw.io output: [docs/AUTHORING_AND_EXPORT.md](docs/AUTHORING_AND_EXPORT.md)
+- gstack diagram skill comparison and roadmap: [docs/GSTACK_DIAGRAM_COMPARISON.md](docs/GSTACK_DIAGRAM_COMPARISON.md)
+- Agent-facing reusable skill: [skills/diagram-generator/SKILL.md](skills/diagram-generator/SKILL.md)
 
 Quick setup:
 
@@ -45,6 +47,84 @@ uv add boto3 diagrams
 # or from project extras:
 uv sync --extra aws-boto3
 ```
+
+## Agent-friendly review bundles
+
+For an evidence-backed infrastructure graph, use a single flag to create a
+review-ready directory plus ZIP. The source graph and Mermaid are preserved,
+while the SVG, PNG and native editable draw.io share the Graphviz layout:
+
+```bash
+./scripts/build-container.sh
+./scripts/run-container.sh --source json \
+  --json tests/snapshots/simple_graph.graph.json \
+  --out-dir output --name system-overview --review-bundle
+```
+
+This writes `output/system-overview/system-overview.graph.json`,
+`.mmd`, `.diagram.svg`, `.diagram.png`, `.diagram.drawio`, `.ferroprint.json` (plus the layout
+`.dot` file) and `output/system-overview.zip`. You can combine
+`--review-bundle` with existing source flags and other format options.
+The source and editable scene are distinct: manual draw.io edits do not
+change the original graph or Mermaid.
+
+For a small flow or sequence diagram that starts as Mermaid rather than
+infrastructure inventory, render directly from `.mmd` or a Markdown file
+containing a fenced `mermaid` code block:
+
+```bash
+./scripts/run-container.sh mermaid --input examples/mermaid-flow.mmd \
+  --out-dir output --output flow
+# Produces flow.mmd, flow.svg, and flow.png (both images by default).
+```
+
+Specify `--format svg` or `--format png` to render just one image. Invalid
+Mermaid fails the command rather than publishing a newly generated partial
+artifact set. The direct Mermaid workflow does not generate a draw.io or
+Excalidraw file; for editable architecture scenes use the graph/spec workflow.
+Always inspect the generated preview and blind spots before publishing.
+
+## One project for editor-ready diagrams and verified statecharts
+
+This repository also accepts two optional workflows inspired by
+[Ferroprint](https://github.com/anthonyrussano/ferroprint) and
+[statechart-generator](https://github.com/anthonyrussano/statechart-generator).
+
+`--ferroprint` adds a native, editable `.ferroprint.json` document from a
+collected graph. The `--review-bundle` preset includes this file automatically,
+together with the existing draw.io, Graphviz SVG/PNG and source outputs. Open
+the JSON in Ferroprint's browser editor to adjust shapes and connectors. The
+editor is **not embedded or installed** by this repository, and the exported
+JSON contains generic shapes rather than inferred provider-specific icons.
+
+```bash
+./scripts/run-container.sh --source json \
+  --json tests/snapshots/simple_graph.graph.json \
+  --out-dir output --name editable --ferroprint
+# output/editable.ferroprint.json
+```
+
+For behavioral correctness, use the model-checked **statechart** command.
+The pinned MIT-licensed TLA+/TLC statechart engine is included in
+`integrations/statechart/`. Install its optional dependencies once:
+
+```bash
+(cd integrations/statechart && ./scripts/bootstrap.sh && ./scripts/check.sh)
+uv run diagram-gen statechart \
+  --spec integrations/statechart/examples/group-provisioning/GroupProvisioning.tla \
+  --config integrations/statechart/examples/group-provisioning/none.cfg \
+  --view integrations/statechart/examples/group-provisioning/view.mjs \
+  --out output/statechart-none --render svg
+```
+
+Exit code 1 is a **modeled rule violation**; check `report.md` and the
+shortest counterexample path. Exit code 2 means the checker or renderer failed.
+An optional `--render png` uses Chromium through Docker/Podman. Java, TLC
+and Pele are not dependencies of normal infrastructure rendering.
+
+See the [cross-repository comparison](docs/CONSOLIDATION_REVIEW.md) and
+[integrated statechart guide](integrations/statechart/README.md) for the
+capability matrix, provenance, setup, and remaining integration limits.
 
 ## Prerequisites
 
